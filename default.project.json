@@ -1,0 +1,30 @@
+{
+  "name": "SeekerRoblox",
+  "tree": {
+    "$className": "DataModel",
+
+    "Lighting": {
+      "LightingPresets": {
+        "$path": "presets"
+      }
+    },
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Lighting": {
+        "$path": "lighting",
+        "PureTween": {
+          "$path": "tween"
+        }
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    }
+  }
+}
