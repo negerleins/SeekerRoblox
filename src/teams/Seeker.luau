@@ -1,10 +1,49 @@
 -- Dependencies
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 
+-- Variables
+local Terrain = workspace.Terrain
+local PlayersFolder = workspace:FindFirstChild("Players")
+local Presets = Lighting:WaitForChild("LightingPresets")
+local Imports = ReplicatedStorage:WaitForChild("Imports")
+local SHared = ReplicatedStorage:WaitForChild("Shared")
+
+-- Modules
+local Seeker = require(Presets:WaitForChild("Seeker"))
+local Replicator = require(SHared:WaitForChild("Replicator"))
+local ShapecastHitbox = require(Imports:WaitForChild("Raycast"))
+
 -- Types
+type HitboxConnection = typeof(ShapecastHitbox.new())
+
+type RaycastClass = typeof(setmetatable) & {
+	Connections: { [string]: HitboxConnection },
+} & {
+	Fetch: (
+		self: RaycastClass,
+		method: (Model: Model, Hitbox: HitboxConnection) -> nil,
+		model: Model,
+		name: string,
+		raycastParams: RaycastParams?
+	) -> nil,
+	CreateHitbox: (
+		self: RaycastClass,
+		name: string,
+		handle: BasePart,
+		raycastParams: RaycastParams?
+	) -> HitboxConnection,
+	End: (self: RaycastClass) -> nil,
+	Cleanup: (self: RaycastClass) -> nil,
+}
+
+type RaycastNew = {
+	new: () -> RaycastClass,
+}
+
 type ConnectorClass = typeof(setmetatable) & {
 	Connections: { RBXScriptConnection },
 } & {
@@ -25,6 +64,7 @@ type MainArray = {
 	Instances: { [any]: Instance },
 	Variables: { [any]: any },
 	Connection: ConnectorClass,
+	Raycast: RaycastClass,
 }
 
 type MainClass = typeof(setmetatable) & MainArray & {
@@ -56,7 +96,7 @@ local Connector = {
 					table.insert(self.Connections, response)
 				end,
 				End = function(self: ConnectorClass)
-					for _, connection: RBXScriptConnection in self.Connections do
+					for _, connection in self.Connections do
 						connection:Disconnect()
 					end
 				end,
@@ -68,10 +108,70 @@ local Connector = {
 	end,
 } :: ConenctorNew
 
--- Variables
-local Terrain = workspace.Terrain
-local PlayersFolder = workspace:FindFirstChild("Players")
-local Presets = Lighting:WaitForChild("LightingPresets")
+-- Raycast Manager
+local RaycastManager = {
+	new = function()
+		return setmetatable({
+			Connections = {},
+		}, {
+			__index = {
+				Fetch = function(
+					self: RaycastClass,
+					method: (Model: Model, Hitbox: HitboxConnection) -> nil,
+					model: Model,
+					name: string,
+					raycastParams: RaycastParams?
+				)
+					local Model, Handle = model:FindFirstChild(name), nil
+
+					if typeof(Model) ~= "Instance" then
+						Model = nil
+					end
+
+					Handle = Model:FindFirstChild("Handle")
+
+					if Model and not Handle then
+						Model = nil
+					end
+
+					if not Model then
+						model.ChildAdded:Connect(function()
+							Handle = Model:FindFirstChild("Handle")
+
+							if Handle and Model:FindFirstChild("DmgPoint", true) then
+								method(Model, self:CreateHitbox(name, Handle, raycastParams))
+							end
+						end)
+					else
+						Handle = Model:FindFirstChild("Handle")
+
+						if Handle and Model:FindFirstChild("DmgPoint", true) then
+							method(Model, self:CreateHitbox(name, Handle, raycastParams))
+						end
+					end
+				end,
+				CreateHitbox = function(
+					self: RaycastClass,
+					name: string,
+					handle: BasePart,
+					raycastParams: RaycastParams?
+				)
+					local HitBox = ShapecastHitbox.new(handle, raycastParams)
+					rawset(self.Connections, name, HitBox)
+					return HitBox
+				end,
+				End = function(self: RaycastClass)
+					for _, connection in self.Connections do
+						connection:Destroy()
+					end
+				end,
+				Cleanup = function(self: RaycastClass)
+					self.Connections = {}
+				end,
+			},
+		})
+	end,
+} :: RaycastNew
 
 -- Functions
 local function EmitEffect(object, emitCount: number?)
@@ -99,18 +199,17 @@ local function SpawnEffect(object: Attachment, reference: BasePart, emitCount: n
 	end)
 end
 
--- Modules
-local Seeker = require(Presets:WaitForChild("Seeker"))
-
 -- Metadata
 return setmetatable({
 	Instances = {},
 	Connection = Connector.new(),
+	Raycast = RaycastManager.new(),
 	Variables = {},
 }, {
 	__index = {
 		cleanup = function(self: MainClass)
 			self.Connection:Cleanup()
+			self.Raycast:Cleanup()
 			self.Instances = {}
 			self.Variables = {}
 		end,
@@ -123,6 +222,7 @@ return setmetatable({
 				for _, innerObject in object:GetDescendants() do
 					if innerObject:IsA("Part") and innerObject.Name ~= "HumanoidRootPart" then
 						innerObject.Transparency = 1
+						innerObject.CollisionGroup = "TouchablePlayer"
 					end
 				end
 			end
@@ -131,11 +231,24 @@ return setmetatable({
 				method()
 			end
 
+			local RaycastParam = RaycastParams.new()
+			RaycastParam.FilterType = Enum.RaycastFilterType.Include
+			RaycastParam.FilterDescendantsInstances = { PlayersFolder }
+			RaycastParam.CollisionGroup = "TouchablePlayer"
+
+			self.Raycast:Fetch(function(Model, Hitbox)
+				Hitbox:HitStart(3):OnHit(function(raycastResult, segmentHit)
+					local Model = raycastResult.Instance:FindFirstAncestorOfClass("Model")
+					
+					if Model and Model:FindFirstChildOfClass("Humanoid") then
+						Replicator:SendToServer("PlayerHit", Model.Name)
+					end
+				end)
+			end, Players.LocalPlayer.Character, "Bat", RaycastParam)
+
 			local pointLight = Instance.new("PointLight", Players.LocalPlayer.Character.PrimaryPart)
 			pointLight.Name = "PointLight"
 			pointLight.Range = 9
-
-			Lighting.ClockTime = 0
 
 			self.Instances[pointLight.Name] = pointLight
 
@@ -223,6 +336,7 @@ return setmetatable({
 		end,
 		stop = function(self)
 			self.Connection:End()
+			self.Raycast:End()
 
 			for _, object: Instance in self.Instances do
 				object:Destroy()

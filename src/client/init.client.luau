@@ -1,48 +1,17 @@
 -- Dependencies
-local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Service
-local ClientService = setmetatable({
-	CurrentInstance = nil,
-}, {
-	__index = {
-		init = function(self)
-			local module = self:require(Players.LocalPlayer.Team.Name)
+-- Variables
+local Shared = ReplicatedStorage:WaitForChild("Shared")
 
-			if module then
-				module:start()
-			end
+-- Shared
+local __replicator = Shared:WaitForChild("Replicator")
 
-			Players.LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
-				module = self:require(Players.LocalPlayer.Team.Name)
+-- Replicator
+local Replicator = require(__replicator)
 
-				if module then
-					module:start()
-				end
-			end)
-		end,
-		require = function(self, name)
-			local exists = script:FindFirstChild(name)
+Replicator:Connect(function(data)
+	warn(data)
+end, "Replicate")
 
-			self:destroy()
-
-			if exists then
-				local module = require(exists)
-				self.CurrentInstance = module
-				return module
-			else
-				return false
-			end
-		end,
-		destroy = function(self)
-			if self.CurrentInstance then
-				self.CurrentInstance:stop()
-				self.CurrentInstance:cleanup()
-			end
-
-			self.CurrentInstance = nil
-		end,
-	},
-})
-
-ClientService:init()
+Replicator:init()

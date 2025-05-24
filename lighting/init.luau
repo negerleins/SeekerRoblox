@@ -371,8 +371,6 @@ Lighting.TweenArray = function(object, config, tweenInfo)
 		local tween = TweenService:Create(lightingInstance, tweenInfo, tweenableProperties)
 		table.insert(Lighting.Tweens[object.Class], tween)
 		tween:Play()
-	else
-		warn("No tweenable properties found for:", object.Class)
 	end
 end
 

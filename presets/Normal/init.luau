@@ -27,8 +27,8 @@ return {
 
 	Lighting.Object.Bloom(true, {
 		[Lighting.Enums.Bloom.Enabled] = true,
-		[Lighting.Enums.Bloom.Intensity] = 1,
-		[Lighting.Enums.Bloom.Size] = 56,
+		[Lighting.Enums.Bloom.Intensity] = 0.4,
+		[Lighting.Enums.Bloom.Size] = 5,
 		[Lighting.Enums.Bloom.Threshold] = 0.886,
 	}, function(object, config)
 		local tweenInfo = TweenService.TweenInfo.new(1)

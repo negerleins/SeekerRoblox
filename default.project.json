@@ -16,11 +16,37 @@
         "PureTween": {
           "$path": "tween"
         }
+      },
+      "Imports": {
+          "$className": "Folder",
+          "Packet": {
+            "$path": "imports/packet"
+          },
+          "HashLib": {
+            "$path": "imports/hashlib"
+          },
+          "Raycast": {
+            "$path": "imports/raycast"
+          }
+        },
+        "Shared": {
+          "$className": "Folder",
+          "$path": "src/shared"
+        }
+    },
+
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Server": {
+        "$path": "src/server"
       }
     },
 
     "StarterPlayer": {
       "StarterPlayerScripts": {
+        "PlayerHandler": {
+          "$path": "src/teams"
+        },
         "Client": {
           "$path": "src/client"
         }
