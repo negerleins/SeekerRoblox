@@ -95,8 +95,6 @@ return setmetatable({
 			for _, method in Normal do
 				method()
 			end
-
-			Lighting.ClockTime = 12.7
 		end,
 		stop = function(self)
 			self.Connection:End()

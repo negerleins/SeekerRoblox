@@ -41,7 +41,7 @@ local Replicator = setmetatable({
 					local method = rawget(self.Connections.Client, array.Category)
 
 					if method then
-						local success, response = pcall(method, array.Data)
+						local success, response = pcall(method, unpack(array.Data))
 						if not success then
 							warn(response)
 						end
@@ -59,7 +59,7 @@ local Replicator = setmetatable({
 						payload: string,
 						category: string,
 					}
-
+                    
 					if typeof(parse) ~= "table" then
 						return player:Kick("Invalid parse, please reconnect")
 					end
@@ -83,15 +83,15 @@ local Replicator = setmetatable({
 					end
 
 					local timestamp = DateTime.now().UnixTimestamp
-					if math.abs(timestamp - parse.timestamp) > 20 then
+					if math.abs(timestamp - tonumber(parse.timestamp)) > 20 then
 						return player:Kick("Lost connection to server, please reconnect.")
 					end
 
 					local __data = HttpService:JSONDecode(parse.payload)
 
-					local success, response = pcall(method, player, __data)
-					if not success then
-						warn(response)
+					local success, response = pcall(method, player, unpack(__data))
+					if not success and response then
+						warn(parse.category, response. player, unpack(__data))
 					end
 
 					return
@@ -102,7 +102,7 @@ local Replicator = setmetatable({
 		end,
 		SendToServer = function(self, category: string, ...) -- Never trust what the client says.
 			local secret = `blacksmith-v1-public-{HttpService:GenerateGUID(false)}`
-			local timestamp = tostring(DateTime.now().UnixTimestamp)
+			local timestamp = DateTime.now().UnixTimestamp
 
 			local data = { ... }
 			local sig = HashLib.hmac(HashLib.sha256, secret, HttpService:JSONEncode(data))
@@ -118,17 +118,16 @@ local Replicator = setmetatable({
 			self.Packets.Client:Fire(_encoded)
 		end,
 		SendToClient = function(self, category, player, ...)
-			self.Packets.Server:FireClient(player, category, ...)
+            local data = HttpService:JSONEncode({
+                Category = category,
+                Data = { ... },
+            })
+
+			self.Packets.Server:FireClient(player, data)
 		end,
 		SendToAllClients = function(self, category, ...)
 			for _, player in Players:GetPlayers() do
-				self.Packets.Server:FireClient(
-					player,
-					HttpService:JSONEncode({
-						Category = category,
-						Data = { ... },
-					})
-				)
+                self:SendToClient(category, player, ...)
 			end
 		end,
 		Connect = function(self, callback, name)

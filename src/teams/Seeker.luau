@@ -2,6 +2,7 @@
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInput = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 
@@ -18,6 +19,22 @@ local Replicator = require(SHared:WaitForChild("Replicator"))
 local ShapecastHitbox = require(Imports:WaitForChild("Raycast"))
 
 -- Types
+type AnimatorClass = typeof(setmetatable) & {
+	Animations: { [number]: AnimationTrack },
+	Instances: { [number]: Animation }
+} & {
+	Load: (
+		self: AnimatorClass,
+		assetid: number
+	) -> AnimationTrack,
+	End: (self: AnimatorClass) -> nil,
+	Cleanup: (self: AnimatorClass) -> nil,
+}
+
+type AnimatorNew = {
+	new: () -> AnimatorClass,
+}
+
 type HitboxConnection = typeof(ShapecastHitbox.new())
 
 type RaycastClass = typeof(setmetatable) & {
@@ -65,6 +82,7 @@ type MainArray = {
 	Variables: { [any]: any },
 	Connection: ConnectorClass,
 	Raycast: RaycastClass,
+	Animation: AnimatorClass
 }
 
 type MainClass = typeof(setmetatable) & MainArray & {
@@ -173,6 +191,49 @@ local RaycastManager = {
 	end,
 } :: RaycastNew
 
+-- Animator
+local Animator = {
+	new = function()
+		return setmetatable({
+			Animations = {},
+			Instances = {}
+		}, {
+			__index = {
+				Load = function(self, assetid: number)
+					local Animation = Instance.new("Animation")
+					Animation.AnimationId = `rbxassetid://{assetid}`
+					table.insert(self.Instances, Animation)
+
+					local Character = game.Players.LocalPlayer.Character
+					local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+					local Animator = Humanoid:FindFirstChildOfClass("Animator")
+
+					if Animator then
+						local AnimationTrack = Animator:LoadAnimation(Animation)
+						table.insert(self.Animations, AnimationTrack)
+						return AnimationTrack
+					else
+						return nil
+					end
+				end,
+				End = function(self)
+					for _, animation: AnimationTrack in self.Animations do
+						animation:Stop()
+						animation:Destroy()
+					end
+
+					for _, instance: Animation in self.Instances do
+						instance:Destroy()
+					end
+				end,
+				Cleanup = function(self)
+					self.Animations = {}
+				end
+			}
+		})
+	end
+} :: AnimatorNew
+
 -- Functions
 local function EmitEffect(object, emitCount: number?)
 	local destroyTime = 0
@@ -204,21 +265,24 @@ return setmetatable({
 	Instances = {},
 	Connection = Connector.new(),
 	Raycast = RaycastManager.new(),
+	Animation = Animator.new(),
 	Variables = {},
 }, {
 	__index = {
 		cleanup = function(self: MainClass)
 			self.Connection:Cleanup()
 			self.Raycast:Cleanup()
+			self.Animation:Cleanup()
 			self.Instances = {}
 			self.Variables = {}
 		end,
 		start = function(self: MainClass)
 			local AppearEffect = ReplicatedFirst:FindFirstChild("AppearEffect")
 			local HeartbeatEffect = ReplicatedFirst:FindFirstChild("HeartbeatEffect")
-			local CaughtEffect = ReplicatedFirst:FindFirstChild("CaughtEffect")
 
-			for _, object: Model in PlayersFolder:GetDescendants() do
+			for _, object: Model in PlayersFolder:GetChildren() do
+				if object == Players.LocalPlayer.Character then continue end
+
 				for _, innerObject in object:GetDescendants() do
 					if innerObject:IsA("Part") and innerObject.Name ~= "HumanoidRootPart" then
 						innerObject.Transparency = 1
@@ -231,19 +295,65 @@ return setmetatable({
 				method()
 			end
 
+			local IdleAnimation = self.Animation:Load(72288275773457)
+			IdleAnimation.Priority = Enum.AnimationPriority.Idle
+
+			local SwingAnimation = self.Animation:Load(74189481580294)
+			SwingAnimation.Priority = Enum.AnimationPriority.Action2
+
+			local MainGui = Players.LocalPlayer.PlayerGui:WaitForChild("MainGui")
+			local AttackBtn = MainGui:FindFirstChild("AttackBtn", true) :: ImageButton
+			SwingAnimation.Priority = Enum.AnimationPriority.Action2
+
+			local AttackClone = AttackBtn:Clone()
+			AttackClone.Visible = true
+			AttackClone.Parent = AttackBtn.Parent
+			self.Instances["AttackClone"] = AttackClone
+
 			local RaycastParam = RaycastParams.new()
 			RaycastParam.FilterType = Enum.RaycastFilterType.Include
 			RaycastParam.FilterDescendantsInstances = { PlayersFolder }
 			RaycastParam.CollisionGroup = "TouchablePlayer"
 
 			self.Raycast:Fetch(function(Model, Hitbox)
-				Hitbox:HitStart(3):OnHit(function(raycastResult, segmentHit)
-					local Model = raycastResult.Instance:FindFirstAncestorOfClass("Model")
-					
-					if Model and Model:FindFirstChildOfClass("Humanoid") then
-						Replicator:SendToServer("PlayerHit", Model.Name)
+				local hasHit = false
+
+				local function Attack()
+					if SwingAnimation.IsPlaying then return end
+
+					IdleAnimation:Stop(0.1)
+					SwingAnimation:Play(0.15)
+
+					SwingAnimation.Ended:Once(function()
+						IdleAnimation:Play(0.25)
+					end)
+
+					hasHit = false
+
+					Hitbox:HitStart(1):OnHit(function(raycastResult, segmentHit)
+						if hasHit then return end;
+
+						local Model = raycastResult.Instance:FindFirstAncestorOfClass("Model")
+						if Model == Players.LocalPlayer.Character then return end
+						
+						if Model and Model:FindFirstChildOfClass("Humanoid") then
+							hasHit = true
+							Replicator:SendToServer("PlayerHit", Model.Name)
+						end
+					end)
+				end
+
+				self.Connection:Attach(UserInput.InputBegan, function(connect, InputObject: InputObject, boolean)
+					if boolean then return end
+
+					if InputObject.KeyCode == Enum.KeyCode.E then
+						Attack()
 					end
 				end)
+
+				self.Connection:Attach(AttackClone.MouseButton1Click, Attack)
+
+				IdleAnimation:Play(0.5)
 			end, Players.LocalPlayer.Character, "Bat", RaycastParam)
 
 			local pointLight = Instance.new("PointLight", Players.LocalPlayer.Character.PrimaryPart)
@@ -254,6 +364,8 @@ return setmetatable({
 
 			self.Connection:Attach(RunService.Heartbeat, function(connection)
 				for _, object: Model in PlayersFolder:GetChildren() do
+					if object == Players.LocalPlayer.Character then continue end
+
 					if object:IsA("Model") and object.PrimaryPart then
 						local Magnitude = (
 							object.PrimaryPart.Position - Players.LocalPlayer.Character.PrimaryPart.Position
@@ -295,21 +407,6 @@ return setmetatable({
 									end
 								end
 							end
-
-							-- Proximity Prompt
-							if not self.Instances["ProximityPrompt" .. object.Name] then
-								local ProximityPrompt = Instance.new("ProximityPrompt")
-								self.Instances["ProximityPrompt" .. object.Name] = ProximityPrompt
-
-								ProximityPrompt.ActionText = "Catch"
-								ProximityPrompt.RequiresLineOfSight = false
-								ProximityPrompt.MaxActivationDistance = 5
-								ProximityPrompt.Triggered:Connect(function()
-									SpawnEffect(CaughtEffect.Effect, object.PrimaryPart, 30)
-								end)
-
-								ProximityPrompt.Parent = object.PrimaryPart
-							end
 						else
 							-- AppearEffect
 							if self.Variables["Appear" .. object.Name] then
@@ -323,12 +420,6 @@ return setmetatable({
 									end
 								end
 							end
-
-							-- Proximity Prompt
-							if self.Instances["ProximityPrompt" .. object.Name] then
-								self.Instances["ProximityPrompt" .. object.Name]:Destroy()
-								self.Instances["ProximityPrompt" .. object.Name] = nil
-							end
 						end
 					end
 				end
@@ -337,12 +428,15 @@ return setmetatable({
 		stop = function(self)
 			self.Connection:End()
 			self.Raycast:End()
+			self.Animation:End()
 
 			for _, object: Instance in self.Instances do
 				object:Destroy()
 			end
 
-			for _, object: Model in PlayersFolder:GetDescendants() do
+			for _, object: Model in PlayersFolder:GetChildren() do
+				if object == Players.LocalPlayer.Character then continue end
+
 				for _, innerObject in object:GetDescendants() do
 					if innerObject:IsA("Part") and innerObject.Name ~= "HumanoidRootPart" then
 						innerObject.Transparency = 0
