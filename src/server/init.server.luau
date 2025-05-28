@@ -44,7 +44,7 @@ local Manager = setmetatable({
 	},
 	GameMode = nil,
 
-	MinimumAmount = 2, -- Amount Of Players allowed to start the game
+	MinimumAmount = 1, -- Amount Of Players allowed to start the game
 
 	HideTime = 5,
 	CountAmount = 15,
@@ -70,7 +70,9 @@ local Manager = setmetatable({
 				local Clone = MapModel:Clone()
 				Clone.Parent = workspace
 				Clone:PivotTo(MapSpawn.CFrame)
+
 				warn("Park initiated")
+
 				self.LoadedMap = Clone
 			end,
 		},
@@ -81,7 +83,9 @@ local Manager = setmetatable({
 				local Clone = MapModel:Clone()
 				Clone.Parent = workspace
 				Clone:PivotTo(MapSpawn.CFrame)
+
 				warn("Canyon initiated")
+
 				self.LoadedMap = Clone
 			end,
 		},
@@ -287,58 +291,36 @@ local Manager = setmetatable({
 			end
 
 			local Spawner = self.LoadedMap:FindFirstChild("Spawner")
-			if not Spawner and self.LoadedMap then
-				self.LoadedMap:Destroy()
-				return
-			end
 
-			local amountOfPlayers = #self.InGamePlayers
-			local chosen = math.random(1, amountOfPlayers)
+			local PlayerModels = PlayersFolder:GetChildren()
+			local Chosen = PlayerModels[math.random(1, #PlayerModels)]
 
-			local seeker = nil
-			for _, _player in PlayersFolder:GetPlayers() do
-				local userid = self.InGamePlayers[chosen]
-				local IsPlayer = Players:GetPlayerByUserId(userid)
-				if IsPlayer ~= _player then
+			for _, PlayerModel in PlayerModels do
+				if PlayerModel == Chosen then
 					continue
 				end
 
-				if _player then
-					seeker = _player
-					local Character = _player.Character
-
-					task.delay(self.HideTime, function()
-						if not Character then
-							self:endGame()
-							return
-						end
-						self:teleport(Character, Spawner.Position + Vector3.new(0, 4, 0))
-						_player.Team = Teams.Seeker
-					end)
-				end
+				self:teleport(PlayerModel, Spawner.Position + Vector3.new(0, 4, 0))
+				self:teamModel(Chosen, Teams.Player)
 			end
 
-			for _, playerModel: Model in PlayersFolder:GetChildren() do
-				if seeker and playerModel == seeker.Character then
-					continue
-				end
-
-				local IsPlayer = Players:GetPlayerFromCharacter(playerModel)
-				if IsPlayer then
-					IsPlayer.Team = Teams.Player
-				end
-
-				self:teleport(playerModel, Spawner.Position + Vector3.new(0, 4, 0))
-			end
-
-			warn("trying to countdown hide time")
+			warn("Hide Time")
 			self:countdown(self.HideTime, function()
-				warn("HideTime")
+				self:teleport(Chosen, Spawner.Position + Vector3.new(0, 4, 0))
+				self:teamModel(Chosen, Teams.Seeker)
+
 				self:countdown(self.GameTime, function()
-					warn("GameTime")
+					warn("Game Time")
 					self:endGame()
 				end)
 			end)
+		end,
+		teamModel = function(self, playerModel: Model, team: Team) 
+			local IsPlayer = Players:GetPlayerFromCharacter(playerModel)
+
+			if IsPlayer then
+				IsPlayer.Team = team
+			end
 		end,
 		selection = function(self)
 			warn("starting selection")
@@ -488,10 +470,7 @@ local Manager = setmetatable({
 				self:teleport(playerModel, SpawnLocation.Position)
 				playerModel.Parent = workspace
 
-				local IsPlayer = Players:GetPlayerFromCharacter(playerModel)
-				if IsPlayer then
-					IsPlayer.Team = Teams.Lobby
-				end
+				self:teamModel(playerModel, Teams.Lobby)
 			end
 
 			if self.LoadedMap then
@@ -525,9 +504,10 @@ local Manager = setmetatable({
 			end
 		end,
 		playerDied = function(self, playerModel: Model)
+			self:teamModel(playerModel, Teams.Lobby)
+
 			local IsPlayer = Players:GetPlayerFromCharacter(playerModel)
 			if IsPlayer then
-				IsPlayer.Team = Teams.Lobby
 				local tableId = table.find(self.InGamePlayers, IsPlayer.UserId)
 				table.remove(self.InGamePlayers, tableId)
 
@@ -634,7 +614,7 @@ Replicator:Connect(function(
 end, "Selection")
 
 Replicator:Connect(function(player: Player, PlayerName)
-	if player.Team ~= game.Teams["Seeker"] then
+	if player.Team ~= Teams["Seeker"] then
 		return
 	end
 
