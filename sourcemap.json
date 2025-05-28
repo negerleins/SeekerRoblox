@@ -1,1 +1,410 @@
-{"name":"SeekerRoblox","className":"DataModel","filePaths":["default.project.json"],"children":[{"name":"Lighting","className":"Lighting","children":[{"name":"LightingPresets","className":"Folder","children":[{"name":"Lobby","className":"ModuleScript","filePaths":["presets/Lobby/init.luau"]},{"name":"Normal","className":"ModuleScript","filePaths":["presets/Normal/init.luau"]},{"name":"Seeker","className":"ModuleScript","filePaths":["presets/Seeker/init.luau"]}]}]},{"name":"ReplicatedStorage","className":"ReplicatedStorage","children":[{"name":"Imports","className":"Folder","children":[{"name":"HashLib","className":"ModuleScript","filePaths":["imports/hashlib/init.luau"]},{"name":"Packet","className":"ModuleScript","filePaths":["imports/packet/init.luau"],"children":[{"name":"Signal","className":"ModuleScript","filePaths":["imports/packet/Signal.luau"]},{"name":"Task","className":"ModuleScript","filePaths":["imports/packet/Task.luau"]},{"name":"Types","className":"ModuleScript","filePaths":["imports/packet/Types/init.luau"],"children":[{"name":"Characters","className":"ModuleScript","filePaths":["imports/packet/Types/Characters.luau"]},{"name":"Static1","className":"ModuleScript","filePaths":["imports/packet/Types/Static1.luau"]},{"name":"Static2","className":"ModuleScript","filePaths":["imports/packet/Types/Static2.luau"]},{"name":"Static3","className":"ModuleScript","filePaths":["imports/packet/Types/Static3.luau"]}]}]},{"name":"Raycast","className":"ModuleScript","filePaths":["imports/raycast/init.luau"],"children":[{"name":"Hitbox","className":"ModuleScript","filePaths":["imports/raycast/Hitbox.luau"]},{"name":"Settings","className":"ModuleScript","filePaths":["imports/raycast/Settings.luau"]},{"name":"Solvers","className":"ModuleScript","filePaths":["imports/raycast/Solvers/init.luau"],"children":[{"name":"Attachment","className":"ModuleScript","filePaths":["imports/raycast/Solvers/Attachment.luau"]},{"name":"Blockcast","className":"ModuleScript","filePaths":["imports/raycast/Solvers/Blockcast.luau"]},{"name":"Raycast","className":"ModuleScript","filePaths":["imports/raycast/Solvers/Raycast.luau"]},{"name":"Spherecast","className":"ModuleScript","filePaths":["imports/raycast/Solvers/Spherecast.luau"]}]},{"name":"Types","className":"ModuleScript","filePaths":["imports/raycast/Types.luau"]},{"name":"Visualizers","className":"ModuleScript","filePaths":["imports/raycast/Visualizers/init.luau"],"children":[{"name":"Blockcast","className":"ModuleScript","filePaths":["imports/raycast/Visualizers/Blockcast.luau"]},{"name":"Raycast","className":"ModuleScript","filePaths":["imports/raycast/Visualizers/Raycast.luau"]},{"name":"Spherecast","className":"ModuleScript","filePaths":["imports/raycast/Visualizers/Spherecast.luau"]}]}]}]},{"name":"Lighting","className":"ModuleScript","filePaths":["lighting/init.luau"],"children":[{"name":"PureTween","className":"ModuleScript","filePaths":["tween/init.luau"],"children":[{"name":"EasingDirection","className":"ModuleScript","filePaths":["tween/EasingDirection/init.luau"],"children":[{"name":"In","className":"ModuleScript","filePaths":["tween/EasingDirection/In.luau"]},{"name":"InOut","className":"ModuleScript","filePaths":["tween/EasingDirection/InOut.luau"]},{"name":"Out","className":"ModuleScript","filePaths":["tween/EasingDirection/Out.luau"]},{"name":"OutIn ","className":"ModuleScript","filePaths":["tween/EasingDirection/OutIn .luau"]}]},{"name":"EasingStyle","className":"ModuleScript","filePaths":["tween/EasingStyle/init.luau"],"children":[{"name":"Back","className":"ModuleScript","filePaths":["tween/EasingStyle/Back.luau"]},{"name":"Bounce","className":"ModuleScript","filePaths":["tween/EasingStyle/Bounce.luau"]},{"name":"Circular","className":"ModuleScript","filePaths":["tween/EasingStyle/Circular.luau"]},{"name":"Cubic","className":"ModuleScript","filePaths":["tween/EasingStyle/Cubic.luau"]},{"name":"Elastic","className":"ModuleScript","filePaths":["tween/EasingStyle/Elastic.luau"]},{"name":"Exponential","className":"ModuleScript","filePaths":["tween/EasingStyle/Exponential.luau"]},{"name":"Linear","className":"ModuleScript","filePaths":["tween/EasingStyle/Linear.luau"]},{"name":"Quad","className":"ModuleScript","filePaths":["tween/EasingStyle/Quad.luau"]},{"name":"Quart","className":"ModuleScript","filePaths":["tween/EasingStyle/Quart.luau"]},{"name":"Quint","className":"ModuleScript","filePaths":["tween/EasingStyle/Quint.luau"]},{"name":"Sine","className":"ModuleScript","filePaths":["tween/EasingStyle/Sine.luau"]}]},{"name":"Tween","className":"ModuleScript","filePaths":["tween/Tween/init.luau"],"children":[{"name":"Interpolate","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/init.luau"],"children":[{"name":"CFrame","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/CFrame.luau"]},{"name":"Color3","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/Color3.luau"]},{"name":"Rect","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/Rect.luau"]},{"name":"Udim","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/Udim.luau"]},{"name":"Udim2","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/Udim2.luau"]},{"name":"Vector2","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/Vector2.luau"]},{"name":"Vector2int16","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/Vector2int16.luau"]},{"name":"Vector3","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/Vector3.luau"]},{"name":"boolean","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/boolean.luau"]},{"name":"number","className":"ModuleScript","filePaths":["tween/Tween/Interpolate/number.luau"]}]}]},{"name":"TweenInfo","className":"ModuleScript","filePaths":["tween/TweenInfo.luau"]}]}]},{"name":"Shared","className":"Folder","children":[{"name":"Replicator","className":"ModuleScript","filePaths":["src/shared/Replicator.luau"]}]}]},{"name":"ServerScriptService","className":"ServerScriptService","children":[{"name":"Server","className":"Script","filePaths":["src/server/init.server.luau"]}]},{"name":"StarterPlayer","className":"StarterPlayer","children":[{"name":"StarterPlayerScripts","className":"StarterPlayerScripts","children":[{"name":"Client","className":"LocalScript","filePaths":["src/client/init.client.luau"]},{"name":"PlayerHandler","className":"LocalScript","filePaths":["src/teams/init.client.luau"],"children":[{"name":"Lobby","className":"ModuleScript","filePaths":["src/teams/Lobby.luau"]},{"name":"Player","className":"ModuleScript","filePaths":["src/teams/Player.luau"]},{"name":"Seeker","className":"ModuleScript","filePaths":["src/teams/Seeker.luau"]}]}]}]}]}
+{
+  "name": "SeekerRoblox",
+  "className": "DataModel",
+  "filePaths": ["default.project.json"],
+  "children": [
+    {
+      "name": "Lighting",
+      "className": "Lighting",
+      "children": [
+        {
+          "name": "LightingPresets",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Lobby",
+              "className": "ModuleScript",
+              "filePaths": ["presets/Lobby/init.luau"]
+            },
+            {
+              "name": "Normal",
+              "className": "ModuleScript",
+              "filePaths": ["presets/Normal/init.luau"]
+            },
+            {
+              "name": "Seeker",
+              "className": "ModuleScript",
+              "filePaths": ["presets/Seeker/init.luau"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ReplicatedStorage",
+      "className": "ReplicatedStorage",
+      "children": [
+        {
+          "name": "Imports",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "HashLib",
+              "className": "ModuleScript",
+              "filePaths": ["imports/hashlib/init.luau"]
+            },
+            {
+              "name": "Packet",
+              "className": "ModuleScript",
+              "filePaths": ["imports/packet/init.luau"],
+              "children": [
+                {
+                  "name": "Signal",
+                  "className": "ModuleScript",
+                  "filePaths": ["imports/packet/Signal.luau"]
+                },
+                {
+                  "name": "Task",
+                  "className": "ModuleScript",
+                  "filePaths": ["imports/packet/Task.luau"]
+                },
+                {
+                  "name": "Types",
+                  "className": "ModuleScript",
+                  "filePaths": ["imports/packet/Types/init.luau"],
+                  "children": [
+                    {
+                      "name": "Characters",
+                      "className": "ModuleScript",
+                      "filePaths": ["imports/packet/Types/Characters.luau"]
+                    },
+                    {
+                      "name": "Static1",
+                      "className": "ModuleScript",
+                      "filePaths": ["imports/packet/Types/Static1.luau"]
+                    },
+                    {
+                      "name": "Static2",
+                      "className": "ModuleScript",
+                      "filePaths": ["imports/packet/Types/Static2.luau"]
+                    },
+                    {
+                      "name": "Static3",
+                      "className": "ModuleScript",
+                      "filePaths": ["imports/packet/Types/Static3.luau"]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Raycast",
+              "className": "ModuleScript",
+              "filePaths": ["imports/raycast/init.luau"],
+              "children": [
+                {
+                  "name": "Hitbox",
+                  "className": "ModuleScript",
+                  "filePaths": ["imports/raycast/Hitbox.luau"]
+                },
+                {
+                  "name": "Settings",
+                  "className": "ModuleScript",
+                  "filePaths": ["imports/raycast/Settings.luau"]
+                },
+                {
+                  "name": "Solvers",
+                  "className": "ModuleScript",
+                  "filePaths": ["imports/raycast/Solvers/init.luau"],
+                  "children": [
+                    {
+                      "name": "Attachment",
+                      "className": "ModuleScript",
+                      "filePaths": ["imports/raycast/Solvers/Attachment.luau"]
+                    },
+                    {
+                      "name": "Blockcast",
+                      "className": "ModuleScript",
+                      "filePaths": ["imports/raycast/Solvers/Blockcast.luau"]
+                    },
+                    {
+                      "name": "Raycast",
+                      "className": "ModuleScript",
+                      "filePaths": ["imports/raycast/Solvers/Raycast.luau"]
+                    },
+                    {
+                      "name": "Spherecast",
+                      "className": "ModuleScript",
+                      "filePaths": ["imports/raycast/Solvers/Spherecast.luau"]
+                    }
+                  ]
+                },
+                {
+                  "name": "Types",
+                  "className": "ModuleScript",
+                  "filePaths": ["imports/raycast/Types.luau"]
+                },
+                {
+                  "name": "Visualizers",
+                  "className": "ModuleScript",
+                  "filePaths": ["imports/raycast/Visualizers/init.luau"],
+                  "children": [
+                    {
+                      "name": "Blockcast",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "imports/raycast/Visualizers/Blockcast.luau"
+                      ]
+                    },
+                    {
+                      "name": "Raycast",
+                      "className": "ModuleScript",
+                      "filePaths": ["imports/raycast/Visualizers/Raycast.luau"]
+                    },
+                    {
+                      "name": "Spherecast",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "imports/raycast/Visualizers/Spherecast.luau"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Lighting",
+          "className": "ModuleScript",
+          "filePaths": ["lighting/init.luau"],
+          "children": [
+            {
+              "name": "PureTween",
+              "className": "ModuleScript",
+              "filePaths": ["tween/init.luau"],
+              "children": [
+                {
+                  "name": "EasingDirection",
+                  "className": "ModuleScript",
+                  "filePaths": ["tween/EasingDirection/init.luau"],
+                  "children": [
+                    {
+                      "name": "In",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingDirection/In.luau"]
+                    },
+                    {
+                      "name": "InOut",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingDirection/InOut.luau"]
+                    },
+                    {
+                      "name": "Out",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingDirection/Out.luau"]
+                    },
+                    {
+                      "name": "OutIn ",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingDirection/OutIn .luau"]
+                    }
+                  ]
+                },
+                {
+                  "name": "EasingStyle",
+                  "className": "ModuleScript",
+                  "filePaths": ["tween/EasingStyle/init.luau"],
+                  "children": [
+                    {
+                      "name": "Back",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Back.luau"]
+                    },
+                    {
+                      "name": "Bounce",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Bounce.luau"]
+                    },
+                    {
+                      "name": "Circular",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Circular.luau"]
+                    },
+                    {
+                      "name": "Cubic",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Cubic.luau"]
+                    },
+                    {
+                      "name": "Elastic",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Elastic.luau"]
+                    },
+                    {
+                      "name": "Exponential",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Exponential.luau"]
+                    },
+                    {
+                      "name": "Linear",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Linear.luau"]
+                    },
+                    {
+                      "name": "Quad",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Quad.luau"]
+                    },
+                    {
+                      "name": "Quart",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Quart.luau"]
+                    },
+                    {
+                      "name": "Quint",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Quint.luau"]
+                    },
+                    {
+                      "name": "Sine",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/EasingStyle/Sine.luau"]
+                    }
+                  ]
+                },
+                {
+                  "name": "Tween",
+                  "className": "ModuleScript",
+                  "filePaths": ["tween/Tween/init.luau"],
+                  "children": [
+                    {
+                      "name": "Interpolate",
+                      "className": "ModuleScript",
+                      "filePaths": ["tween/Tween/Interpolate/init.luau"],
+                      "children": [
+                        {
+                          "name": "CFrame",
+                          "className": "ModuleScript",
+                          "filePaths": ["tween/Tween/Interpolate/CFrame.luau"]
+                        },
+                        {
+                          "name": "Color3",
+                          "className": "ModuleScript",
+                          "filePaths": ["tween/Tween/Interpolate/Color3.luau"]
+                        },
+                        {
+                          "name": "Rect",
+                          "className": "ModuleScript",
+                          "filePaths": ["tween/Tween/Interpolate/Rect.luau"]
+                        },
+                        {
+                          "name": "Udim",
+                          "className": "ModuleScript",
+                          "filePaths": ["tween/Tween/Interpolate/Udim.luau"]
+                        },
+                        {
+                          "name": "Udim2",
+                          "className": "ModuleScript",
+                          "filePaths": ["tween/Tween/Interpolate/Udim2.luau"]
+                        },
+                        {
+                          "name": "Vector2",
+                          "className": "ModuleScript",
+                          "filePaths": ["tween/Tween/Interpolate/Vector2.luau"]
+                        },
+                        {
+                          "name": "Vector2int16",
+                          "className": "ModuleScript",
+                          "filePaths": [
+                            "tween/Tween/Interpolate/Vector2int16.luau"
+                          ]
+                        },
+                        {
+                          "name": "Vector3",
+                          "className": "ModuleScript",
+                          "filePaths": ["tween/Tween/Interpolate/Vector3.luau"]
+                        },
+                        {
+                          "name": "boolean",
+                          "className": "ModuleScript",
+                          "filePaths": ["tween/Tween/Interpolate/boolean.luau"]
+                        },
+                        {
+                          "name": "number",
+                          "className": "ModuleScript",
+                          "filePaths": ["tween/Tween/Interpolate/number.luau"]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "TweenInfo",
+                  "className": "ModuleScript",
+                  "filePaths": ["tween/TweenInfo.luau"]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Shared",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Replicator",
+              "className": "ModuleScript",
+              "filePaths": ["src/shared/Replicator.luau"]
+            },
+            {
+              "name": "Connector",
+              "className": "ModuleScript",
+              "filePaths": ["src/shared/Connector.luau"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ServerScriptService",
+      "className": "ServerScriptService",
+      "children": [
+        {
+          "name": "Server",
+          "className": "Script",
+          "filePaths": ["src/server/init.server.luau"]
+        }
+      ]
+    },
+    {
+      "name": "StarterPlayer",
+      "className": "StarterPlayer",
+      "children": [
+        {
+          "name": "StarterPlayerScripts",
+          "className": "StarterPlayerScripts",
+          "children": [
+            {
+              "name": "Client",
+              "className": "LocalScript",
+              "filePaths": ["src/client/init.client.luau"]
+            },
+            {
+              "name": "PlayerHandler",
+              "className": "LocalScript",
+              "filePaths": ["src/teams/init.client.luau"],
+              "children": [
+                {
+                  "name": "Lobby",
+                  "className": "ModuleScript",
+                  "filePaths": ["src/teams/Lobby.luau"]
+                },
+                {
+                  "name": "Player",
+                  "className": "ModuleScript",
+                  "filePaths": ["src/teams/Player.luau"]
+                },
+                {
+                  "name": "Seeker",
+                  "className": "ModuleScript",
+                  "filePaths": ["src/teams/Seeker.luau"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

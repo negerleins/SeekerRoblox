@@ -11,15 +11,19 @@ local PlayersFolder = workspace:FindFirstChild("Players")
 local Maps = ServerStorage:FindFirstChild("Maps")
 local MapSpawn = workspace:FindFirstChild("MapSpawn")
 local SpawnLocation = workspace:FindFirstChild("SpawnLocation")
+local RunService = game:GetService("RunService")
 
 -- Shared
 local __replicator = Shared:FindFirstChild("Replicator")
+local __connector = Shared:FindFirstChild("Connector")
 
 -- Replicator
 local Replicator = require(__replicator)
+local Connector = require(__connector)
 
 -- Manager
 local Manager = setmetatable({
+	PlayerConnections = {},
 	GameModes = {
 		["Infector"] = {
 			ImageId = 1178386199,
@@ -40,10 +44,11 @@ local Manager = setmetatable({
 	},
 	GameMode = nil,
 
-	MinimumAmount = 1, -- Amount Of Players allowed to start the game
+	MinimumAmount = 2, -- Amount Of Players allowed to start the game
 
-	HideTime = 10,
+	HideTime = 5,
 	CountAmount = 15,
+	MapLoadingTime = 2,
 
 	GameCount = 10, -- Selection
 	MapCount = 10, -- Selection
@@ -94,7 +99,12 @@ local Manager = setmetatable({
 	__index = {
 		init = function(self)
 			Players.PlayerAdded:Connect(function(player)
-				player:GetPropertyChangedSignal("Team"):Connect(function()
+				local Connection = Connector.new()
+				self.PlayerConnections[player.UserId] = Connection
+
+				player.DevTouchMovementMode = Enum.DevTouchMovementMode.Thumbstick
+
+				Connection:Attach(player:GetPropertyChangedSignal("Team"), function()
 					local Character = player.Character
 
 					if player:GetAttribute("HasBat") then
@@ -201,7 +211,7 @@ local Manager = setmetatable({
 					end
 				end)
 
-				player.CharacterAdded:Connect(function(character)
+				Connection:Attach(player.CharacterAdded, function(connection, character)
 					self:characterAdded(character)
 				end)
 			end)
@@ -228,13 +238,13 @@ local Manager = setmetatable({
 		initiate = function(self)
 			if self.Initiated then
 				return
-			else
-				self.Initiated = true
 			end
 
 			local Current = #Players:GetPlayers()
 
 			if Current >= self.MinimumAmount then
+				self.Initiated = true
+
 				self:countdown(self.CountAmount, self.selection)
 			else
 				task.wait(1)
@@ -242,27 +252,33 @@ local Manager = setmetatable({
 			end
 		end,
 		countdown = function(self, count, method)
-			warn("Starting countdown")
+			-- Cancel any existing countdown first
+			if self.CurrentCountdown then
+				self.CurrentCountdown = nil
+				task.wait(0.1) -- Brief pause for cleanup
+			end
+
+			warn("Starting countdown for", count, "seconds")
+			local UUID = HttpService:GenerateGUID(false)
+			self.CurrentCountdown = UUID
+
 			task.spawn(function()
-				local UUID = HttpService:GenerateGUID(false)
-				self.CurrentCountdown = UUID
-
 				local Count = count
-
 				repeat
-					if self.CurrentCountdown ~= UUID then
-						break
-					end
 					task.wait(1)
+					if self.CurrentCountdown ~= UUID then
+						warn("Countdown cancelled:", UUID)
+						return
+					end
 					Count -= 1
 					workspace:SetAttribute("Time", Count)
 				until Count <= 0
 
-				if self.CurrentCountdown ~= UUID then
-					return
+				-- Clear countdown before calling method
+				if self.CurrentCountdown == UUID then
+					self.CurrentCountdown = nil
+					task.spawn(method, self)
 				end
-
-				task.spawn(method, self)
 			end)
 		end,
 		initiateGame = function(self)
@@ -280,7 +296,7 @@ local Manager = setmetatable({
 			local chosen = math.random(1, amountOfPlayers)
 
 			local seeker = nil
-			for _, _player in Players:GetPlayers() do
+			for _, _player in PlayersFolder:GetPlayers() do
 				local userid = self.InGamePlayers[chosen]
 				local IsPlayer = Players:GetPlayerByUserId(userid)
 				if IsPlayer ~= _player then
@@ -294,8 +310,9 @@ local Manager = setmetatable({
 					task.delay(self.HideTime, function()
 						if not Character then
 							self:endGame()
+							return
 						end
-						Character:PivotTo(Spawner.CFrame)
+						self:teleport(Character, Spawner.Position + Vector3.new(0, 4, 0))
 						_player.Team = Teams.Seeker
 					end)
 				end
@@ -303,7 +320,7 @@ local Manager = setmetatable({
 
 			for _, playerModel: Model in PlayersFolder:GetChildren() do
 				if seeker and playerModel == seeker.Character then
-					return
+					continue
 				end
 
 				local IsPlayer = Players:GetPlayerFromCharacter(playerModel)
@@ -311,11 +328,14 @@ local Manager = setmetatable({
 					IsPlayer.Team = Teams.Player
 				end
 
-				playerModel:PivotTo(Spawner.CFrame)
+				self:teleport(playerModel, Spawner.Position + Vector3.new(0, 4, 0))
 			end
 
+			warn("trying to countdown hide time")
 			self:countdown(self.HideTime, function()
+				warn("HideTime")
 				self:countdown(self.GameTime, function()
+					warn("GameTime")
 					self:endGame()
 				end)
 			end)
@@ -323,60 +343,116 @@ local Manager = setmetatable({
 		selection = function(self)
 			warn("starting selection")
 
+			-- Clear previous selection data
 			self.SelectionData.Valid = {}
 			self.SelectionData.Players = {
 				["GameMode"] = {},
 				["Map"] = {},
 			}
 
+			-- Set valid flags
 			self.SelectionData.Valid["GameMode"] = true
 			self.SelectionData.Valid["Map"] = true
 
-			task.spawn(function()
-				-- GameMode Selection
-				local GameModeContent = {}
+			-- Prepare content
+			local GameModeContent = {}
+			for name, data in self.GameModes do
+				self.SelectionData.Valid[name] = true
+				table.insert(GameModeContent, {
+					ImageId = data.ImageId,
+					Selection = name,
+				})
+			end
 
-				for name, data in self.GameModes do
-					self.SelectionData.Valid[name] = true
+			local MapContent = {}
+			for name, data in self.Maps do
+				self.SelectionData.Valid[name] = true
+				table.insert(MapContent, {
+					ImageId = data.ImageId,
+					Selection = name,
+				})
+			end
 
-					table.insert(GameModeContent, {
-						ImageId = data.ImageId,
-						Selection = name,
-					})
-				end
+			-- Send GameMode selection
+			Replicator:SendToAllClients("ServerGui", {
+				Type = "GameMode",
+				Enabled = true,
+				Contents = GameModeContent,
+			})
 
+			-- Use sequential countdowns instead of nested ones
+			self:countdown(self.GameCount, function()
+				-- Send Map selection
 				Replicator:SendToAllClients("ServerGui", {
-					Type = "GameMode",
+					Type = "Map",
 					Enabled = true,
-					Contents = GameModeContent,
+					Contents = MapContent,
 				})
 
-				-- Map Selection
-				local MapContent = {}
-				for name, data in self.Maps do
-					self.SelectionData.Valid[name] = true
-
-					table.insert(MapContent, {
-						ImageId = data.ImageId,
-						Selection = name,
+				self:countdown(self.MapCount, function()
+					Replicator:SendToAllClients("ServerGui", {
+						Enabled = false,
 					})
+					self:start()
+				end)
+			end)
+		end,
+
+		teleport = function(self, model: Model, position: Vector3)
+			if not model or not model.PrimaryPart or not model.Parent then
+				warn("Invalid model for teleportation")
+				return
+			end
+
+			-- Set network ownership before teleporting
+			local success, err = pcall(function()
+				model.PrimaryPart:SetNetworkOwner(nil)
+			end)
+
+			if not success then
+				warn("Failed to set network owner:", err)
+				return
+			end
+
+			task.spawn(function()
+				local attempts = 0
+				local maxAttempts = 50 -- 5 second timeout
+
+				repeat
+					attempts += 1
+
+					if not model.Parent or not model.PrimaryPart then
+						warn("Model destroyed during teleport")
+						return
+					end
+
+					-- Use safer teleportation
+					local success, err = pcall(function()
+						model:PivotTo(CFrame.new(position))
+					end)
+
+					if not success then
+						warn("Teleport failed:", err)
+						break
+					end
+
+					task.wait(0.1)
+				until (model:GetPivot().Position - position).Magnitude <= 3 or attempts >= maxAttempts
+
+				if attempts >= maxAttempts then
+					warn("Teleport timeout for", model.Name)
+					return
 				end
 
-				self:countdown(self.GameCount, function()
-					Replicator:SendToAllClients("ServerGui", {
-						Type = "Map",
-						Enabled = true,
-						Contents = MapContent,
-					})
-
-					self:countdown(self.MapCount, function()
-						Replicator:SendToAllClients("ServerGui", {
-							Enabled = false,
-						})
-
-						self:countdown(self.StartCount, self.start)
+				-- Restore network ownership
+				local IsPlayer = Players:GetPlayerFromCharacter(model)
+				if IsPlayer and IsPlayer.Parent then
+					pcall(function()
+						model.PrimaryPart:SetNetworkOwner(IsPlayer)
 					end)
-				end)
+				end
+
+				print("Teleport successful for", model.Name)
 			end)
 		end,
 		select = function(self, player: Player, data)
@@ -397,42 +473,71 @@ local Manager = setmetatable({
 			self.SelectionData.Players[data.Type][player.UserId] = data
 		end,
 		endGame = function(self)
-			self:countdown(5, function()
-				for _, playerModel: Model in PlayersFolder:GetChildren() do
-					playerModel:PivotTo(SpawnLocation.CFrame)
-					playerModel.Parent = workspace
+			warn("Ending game")
 
-					local IsPlayer = Players:GetPlayerFromCharacter(playerModel)
-					if IsPlayer then
-						IsPlayer.Team = Teams.Lobby
-					end
+			self.CurrentCountdown = nil
+
+			self.InGamePlayers = {}
+			self.SelectionData.Players = {
+				["GameMode"] = {},
+				["Map"] = {},
+			}
+			self.SelectionData.Valid = {}
+
+			for _, playerModel: Model in PlayersFolder:GetChildren() do
+				self:teleport(playerModel, SpawnLocation.Position)
+				playerModel.Parent = workspace
+
+				local IsPlayer = Players:GetPlayerFromCharacter(playerModel)
+				if IsPlayer then
+					IsPlayer.Team = Teams.Lobby
 				end
+			end
 
-				if self.LoadedMap then
-					self.LoadedMap:Destroy()
-				end
+			if self.LoadedMap then
+				self.LoadedMap:Destroy()
+				self.LoadedMap = nil
+			end
 
-				self.Initiated = false
+			task.wait(2)
+			self.Initiated = false
+
+			if #Players:GetPlayers() >= self.MinimumAmount then
 				self:initiate()
-			end)
+			end
 		end,
 		playerLeft = function(self, player: Player)
-			local wasPlaying = table.find(self.InGamePlayers, player.UserId)
+			local tableId = table.find(self.InGamePlayers, player.UserId)
 
-			if wasPlaying then
+			if tableId then
+				table.remove(self.InGamePlayers, tableId)
+
 				if #self.InGamePlayers <= 1 then
 					self:endGame()
 				end
+			end
+
+			local Connection = self.PlayerConnections[player.UserId]
+
+			if Connection then
+				Connection:End()
+				Connection:Cleanup()
 			end
 		end,
 		playerDied = function(self, playerModel: Model)
 			local IsPlayer = Players:GetPlayerFromCharacter(playerModel)
 			if IsPlayer then
 				IsPlayer.Team = Teams.Lobby
+				local tableId = table.find(self.InGamePlayers, IsPlayer.UserId)
+				table.remove(self.InGamePlayers, tableId)
+
+				if #self.InGamePlayers <= 1 then
+					self:endGame()
+				end
 			end
-			
+
 			playerModel.Parent = workspace
-			playerModel:PivotTo(SpawnLocation.CFrame)
+			self:teleport(playerModel, SpawnLocation.Position)
 		end,
 		start = function(self)
 			warn("starting game")
@@ -497,11 +602,13 @@ local Manager = setmetatable({
 				end
 			end
 
-			for name, data in self.GameModes do
-				if name == GameMode then
-					data.method(self)
+			self:countdown(self.MapLoadingTime, function()
+				for name, data in self.GameModes do
+					if name == GameMode then
+						data.method(self)
+					end
 				end
-			end
+			end)
 		end,
 	},
 })
@@ -543,7 +650,7 @@ Replicator:Connect(function(player: Player, PlayerName)
 			local Humanoid = Player:FindFirstChildOfClass("Humanoid")
 
 			if Humanoid then
-				if (Humanoid.RootPart.Position - InvokerHUmanoid.RootPart.Position).Magnitude < 12 then
+				if (Humanoid.RootPart.Position - InvokerHUmanoid.RootPart.Position).Magnitude < 8 then
 					Replicator:SendToAllClients("CaughtEffect", PlayerName)
 
 					task.delay(0.25, function()

@@ -21,12 +21,9 @@ local ShapecastHitbox = require(Imports:WaitForChild("Raycast"))
 -- Types
 type AnimatorClass = typeof(setmetatable) & {
 	Animations: { [number]: AnimationTrack },
-	Instances: { [number]: Animation }
+	Instances: { [number]: Animation },
 } & {
-	Load: (
-		self: AnimatorClass,
-		assetid: number
-	) -> AnimationTrack,
+	Load: (self: AnimatorClass, assetid: number) -> AnimationTrack,
 	End: (self: AnimatorClass) -> nil,
 	Cleanup: (self: AnimatorClass) -> nil,
 }
@@ -82,7 +79,9 @@ type MainArray = {
 	Variables: { [any]: any },
 	Connection: ConnectorClass,
 	Raycast: RaycastClass,
-	Animation: AnimatorClass
+	Animation: AnimatorClass,
+	EffectedPlayers: { Model },
+	WeaponCooldown: number,
 }
 
 type MainClass = typeof(setmetatable) & MainArray & {
@@ -196,7 +195,7 @@ local Animator = {
 	new = function()
 		return setmetatable({
 			Animations = {},
-			Instances = {}
+			Instances = {},
 		}, {
 			__index = {
 				Load = function(self, assetid: number)
@@ -228,10 +227,10 @@ local Animator = {
 				end,
 				Cleanup = function(self)
 					self.Animations = {}
-				end
-			}
+				end,
+			},
 		})
-	end
+	end,
 } :: AnimatorNew
 
 -- Functions
@@ -267,6 +266,8 @@ return setmetatable({
 	Raycast = RaycastManager.new(),
 	Animation = Animator.new(),
 	Variables = {},
+	EffectedPlayers = {},
+	WeaponCooldown = 2.5,
 }, {
 	__index = {
 		cleanup = function(self: MainClass)
@@ -275,13 +276,17 @@ return setmetatable({
 			self.Animation:Cleanup()
 			self.Instances = {}
 			self.Variables = {}
+			self.EffectedPlayers = {}
 		end,
 		start = function(self: MainClass)
 			local AppearEffect = ReplicatedFirst:FindFirstChild("AppearEffect")
 			local HeartbeatEffect = ReplicatedFirst:FindFirstChild("HeartbeatEffect")
 
 			for _, object: Model in PlayersFolder:GetChildren() do
-				if object == Players.LocalPlayer.Character then continue end
+				if object == Players.LocalPlayer.Character then
+					continue
+				end
+				table.insert(self.EffectedPlayers, object)
 
 				for _, innerObject in object:GetDescendants() do
 					if innerObject:IsA("Part") and innerObject.Name ~= "HumanoidRootPart" then
@@ -317,9 +322,22 @@ return setmetatable({
 
 			self.Raycast:Fetch(function(Model, Hitbox)
 				local hasHit = false
+				local cooldown = false
 
 				local function Attack()
-					if SwingAnimation.IsPlaying then return end
+					if cooldown then
+						return
+					else
+						cooldown = true
+
+						task.delay(self.WeaponCooldown, function()
+							cooldown = false
+						end)
+					end
+					
+					if SwingAnimation.IsPlaying then
+						return
+					end
 
 					IdleAnimation:Stop(0.1)
 					SwingAnimation:Play(0.15)
@@ -331,11 +349,15 @@ return setmetatable({
 					hasHit = false
 
 					Hitbox:HitStart(1):OnHit(function(raycastResult, segmentHit)
-						if hasHit then return end;
+						if hasHit then
+							return
+						end
 
 						local Model = raycastResult.Instance:FindFirstAncestorOfClass("Model")
-						if Model == Players.LocalPlayer.Character then return end
-						
+						if Model == Players.LocalPlayer.Character then
+							return
+						end
+
 						if Model and Model:FindFirstChildOfClass("Humanoid") then
 							hasHit = true
 							Replicator:SendToServer("PlayerHit", Model.Name)
@@ -344,7 +366,9 @@ return setmetatable({
 				end
 
 				self.Connection:Attach(UserInput.InputBegan, function(connect, InputObject: InputObject, boolean)
-					if boolean then return end
+					if boolean then
+						return
+					end
 
 					if InputObject.KeyCode == Enum.KeyCode.E then
 						Attack()
@@ -363,8 +387,10 @@ return setmetatable({
 			self.Instances[pointLight.Name] = pointLight
 
 			self.Connection:Attach(RunService.Heartbeat, function(connection)
-				for _, object: Model in PlayersFolder:GetChildren() do
-					if object == Players.LocalPlayer.Character then continue end
+				for _, object: Model in self.EffectedPlayers do
+					if object == Players.LocalPlayer.Character then
+						continue
+					end
 
 					if object:IsA("Model") and object.PrimaryPart then
 						local Magnitude = (
@@ -434,8 +460,10 @@ return setmetatable({
 				object:Destroy()
 			end
 
-			for _, object: Model in PlayersFolder:GetChildren() do
-				if object == Players.LocalPlayer.Character then continue end
+			for _, object: Model in self.EffectedPlayers do
+				if object == Players.LocalPlayer.Character then
+					continue
+				end
 
 				for _, innerObject in object:GetDescendants() do
 					if innerObject:IsA("Part") and innerObject.Name ~= "HumanoidRootPart" then
