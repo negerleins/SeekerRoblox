@@ -294,6 +294,7 @@ local Manager = setmetatable({
 
 			local PlayerModels = PlayersFolder:GetChildren()
 			local Chosen = PlayerModels[math.random(1, #PlayerModels)]
+			self:teamModel(Chosen, Teams.Seeker)
 
 			for _, PlayerModel in PlayerModels do
 				if PlayerModel == Chosen then
@@ -307,7 +308,6 @@ local Manager = setmetatable({
 			warn("Hide Time")
 			self:countdown(self.HideTime, function()
 				self:teleport(Chosen, Spawner.Position + Vector3.new(0, 4, 0))
-				self:teamModel(Chosen, Teams.Seeker)
 
 				self:countdown(self.GameTime, function()
 					warn("Game Time")
@@ -379,7 +379,6 @@ local Manager = setmetatable({
 				end)
 			end)
 		end,
-
 		teleport = function(self, model: Model, position: Vector3)
 			if not model or not model.PrimaryPart or not model.Parent then
 				warn("Invalid model for teleportation")

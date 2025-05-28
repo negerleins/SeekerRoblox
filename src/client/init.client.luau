@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local HttpService = game:GetService("HttpService")
 
 -- Variables
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -10,6 +11,7 @@ local ServerGui = Players.LocalPlayer.PlayerGui:WaitForChild("ServerGui")
 
 -- Shared
 local __replicator = Shared:WaitForChild("Replicator")
+local __connector = Shared:WaitForChild("Connector")
 
 -- Locals
 local CaughtEffect = ReplicatedFirst:FindFirstChild("CaughtEffect")
@@ -17,6 +19,7 @@ local PlayersFolder = workspace:FindFirstChild("Players")
 
 -- Replicator
 local Replicator = require(__replicator)
+local Connector = require(__connector)
 
 -- Functions
 local function EmitEffect(object, emitCount: number?)
@@ -58,6 +61,9 @@ Replicator:Connect(function(PlayerName)
 	end
 end, "CaughtEffect")
 
+-- Values
+local Connection = Connector.new()
+
 Replicator:Connect(function(PageData: {
 	Type: string,
 	Enabled: boolean,
@@ -69,6 +75,11 @@ Replicator:Connect(function(PageData: {
 	local ContentFrame = Canvas.ContentsFrame
 	Canvas.Visible = PageData.Enabled
 
+	if Connection then
+		Connection:End()
+		Connection:Cleanup()
+	end
+
 	for _, object in ContentFrame:GetChildren() do
 		if object:IsA("ImageButton") then
 			object:Destroy()
@@ -78,12 +89,22 @@ Replicator:Connect(function(PageData: {
 	if PageData.Enabled then
 		for _, data in PageData.Contents do
 			local template = Instance.new("ImageButton", ContentFrame)
-			template.Name = "Template"
+			template.Name = HttpService:GenerateGUID(false)
 			template.Active = false
 			template.BackgroundTransparency = 1
 			template.Selectable = false
 			template.Size = UDim2.fromOffset(150, 150)
 			template.Image = `http://www.roblox.com/asset/?id={data.ImageId}`
+
+			Connection:Attach(ContentFrame:GetAttributeChangedSignal("Selected"), function()
+				local Value = ContentFrame:GetAttribute("Selected")
+
+				if template.Name == Value then
+					template.ImageColor3 = Color3.fromRGB(138, 138, 138)
+				else
+					template.ImageColor3 =Color3.fromRGB(255, 255, 255)
+				end
+			end)
 
 			local uICorner = Instance.new("UICorner")
 			uICorner.Name = "UICorner"
@@ -94,6 +115,7 @@ Replicator:Connect(function(PageData: {
 					Type = PageData.Type,
 					Selected = data.Selection
 				})
+				ContentFrame:SetAttribute("Selected", template.Name)
 			end)
 		end
 	end
