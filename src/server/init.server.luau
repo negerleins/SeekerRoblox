@@ -385,7 +385,6 @@ local Manager = setmetatable({
 				return
 			end
 
-			-- Set network ownership before teleporting
 			local success, err = pcall(function()
 				model.PrimaryPart:SetNetworkOwner(nil)
 			end)
@@ -397,7 +396,7 @@ local Manager = setmetatable({
 
 			task.spawn(function()
 				local attempts = 0
-				local maxAttempts = 50 -- 5 second timeout
+				local maxAttempts = 50
 
 				repeat
 					attempts += 1
@@ -407,7 +406,6 @@ local Manager = setmetatable({
 						return
 					end
 
-					-- Use safer teleportation
 					local success, err = pcall(function()
 						model:PivotTo(CFrame.new(position))
 					end)
@@ -424,8 +422,7 @@ local Manager = setmetatable({
 					warn("Teleport timeout for", model.Name)
 					return
 				end
-
-				-- Restore network ownership
+				
 				local IsPlayer = Players:GetPlayerFromCharacter(model)
 				if IsPlayer and IsPlayer.Parent then
 					pcall(function()
