@@ -25,7 +25,13 @@ function Task:Defer(func, ...)
 end
 
 function Task:Delay(duration, func, ...)
-	return task.delay(duration, table.remove(threads) or task.spawn(Thread), func, ...)
+	local args = {...} -- Capture varargs to pass them to the pooled thread
+	return task.delay(duration, function()
+		-- This function is the callback for task.delay
+		-- It will execute after 'duration'
+		local workerThread = table.remove(threads) or task.spawn(Thread)
+		task.spawn(workerThread, func, unpack(args)) -- Use task.spawn with the worker thread
+	end)
 end
 
 -- Functions
