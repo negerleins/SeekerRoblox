@@ -79,7 +79,7 @@ for _, object in Purchasables:GetChildren() do
 	local Module = require(object.Settings)
 
 	Prompt.Triggered:Connect(function()
-		local productId = 000000
+		local productId = Module.ID
 
 		local success, _ = pcall(function()
 			MarketplaceService:PromptProductPurchase(Players.LocalPlayer, productId)
