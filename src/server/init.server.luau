@@ -98,8 +98,106 @@ local Manager = setmetatable({
 		Diamonds = 0,
 		Chance = 0,
 		Wins = 0,
+		Rewards = {
+			Claimed = 0,
+			Current = 0,
+			Timestamp = {
+				Current = 0,
+				Last = 0
+			},
+		},
 	},
 	Profiles = {},
+	Rewards = {
+		[1] = {
+			List = {
+				[1] = {
+					Properties = {
+						Title = "Day 1",
+						Context = "200$",
+						IamgeId = 12102714092,
+					},
+					Method = function(self, player: Player, profile: ProfileStore.Profile<any>)
+						profile.Data.Claimed = 1
+						profile.Data.Money += 200
+						self:UpdatePlayer(player)
+					end,
+				},
+				[2] = {
+					Properties = {
+						Title = "Day 2",
+						Context = "5$D",
+						IamgeId = 12102714092,
+					},
+					Method = function(self, player: Player, profile: ProfileStore.Profile<any>)
+						profile.Data.Claimed = 2
+						profile.Data.Diamonds += 5
+						self:UpdatePlayer(player)
+					end,
+				},
+				[3] = {
+					Properties = {
+						Title = "Day 3",
+						Context = "500$",
+						IamgeId = 12102714092,
+					},
+					Method = function(self, player: Player, profile: ProfileStore.Profile<any>)
+						profile.Data.Claimed = 3
+						profile.Data.Money += 500
+						self:UpdatePlayer(player)
+					end,
+				},
+				[4] = {
+					Properties = {
+						Title = "Day 4",
+						Context = "1000$",
+						IamgeId = 12102714092,
+					},
+					Method = function(self, player: Player, profile: ProfileStore.Profile<any>)
+						profile.Data.Claimed = 4
+						profile.Data.Money += 1000
+						self:UpdatePlayer(player)
+					end,
+				},
+				[5] = {
+					Properties = {
+						Title = "Day 5",
+						Context = "10$D",
+						IamgeId = 12102714092,
+					},
+					Method = function(self, player: Player, profile: ProfileStore.Profile<any>)
+						profile.Data.Claimed = 5
+						profile.Data.Diamonds += 15
+						self:UpdatePlayer(player)
+					end,
+				},
+				[6] = {
+					Properties = {
+						Title = "Day 6",
+						Context = "100%",
+						IamgeId = 12102714092,
+					},
+					Method = function(self, player: Player, profile: ProfileStore.Profile<any>)
+						profile.Data.Claimed = 6
+						profile.Data.Chance = 100
+						self:UpdatePlayer(player)
+					end,
+				},
+				[7] = {
+					Properties = {
+						Title = "Day 7",
+						Context = "50$D",
+						IamgeId = 12102714092,
+					},
+					Method = function(self, player: Player, profile: ProfileStore.Profile<any>)
+						profile.Data.Claimed = 7
+						profile.Data.Diamonds += 50
+						self:UpdatePlayer(player)
+					end,
+				},
+			},
+		},
+	},
 }, {
 	__index = {
 		init = function(self)
@@ -265,7 +363,6 @@ local Manager = setmetatable({
 			Leaderstats.Name = "leaderstats"
 
 			local Wins = Instance.new("NumberValue", Leaderstats)
-			Wins.Value = profile.Data["Wins"]
 			Wins.Name = "Wins"
 
 			self:UpdatePlayer(player)
@@ -284,6 +381,7 @@ local Manager = setmetatable({
 			player:SetAttribute("Money", profile.Data["Money"])
 			player:SetAttribute("Diamonds", profile.Data["Diamonds"])
 			player:SetAttribute("Chance", profile.Data["Chance"])
+			player:SetAttribute("Wins", profile.Data["Wins"])
 		end,
 		characterAdded = function(self, character)
 			local Humanoid = character:FindFirstChildOfClass("Humanoid") :: Humanoid
@@ -407,6 +505,7 @@ local Manager = setmetatable({
 				if Player then
 					local Profile = self.Profiles[Player.UserId] :: ProfileStore.Profile<any>
 					Profile.Data.Chance = 0
+
 					self:UpdatePlayer(Player)
 
 					self:teamModel(SeekerModel, Teams.Seeker)

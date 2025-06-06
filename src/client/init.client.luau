@@ -5,13 +5,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local HttpService = game:GetService("HttpService")
 
+local function WaitForChild(parent, name)
+	repeat
+		task.wait()
+	until parent:FindFirstChild(name)
+	return parent:FindFirstChild(name)
+end
+
 -- Variables
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Terrain = workspace.Terrain
 local Purchasables = workspace:WaitForChild("Purchasables")
 local VoteSection = workspace:WaitForChild("VoteSection")
 local Blocks = VoteSection:WaitForChild("Blocks")
-local Board = VoteSection:WaitForChild("Board")
+local Board = WaitForChild(VoteSection, "Board")
 local SurfaceGui = Board:WaitForChild("SurfaceGui")
 local MainGui = Players.LocalPlayer.PlayerGui:WaitForChild("MainGui")
 local MainContainer = MainGui:WaitForChild("MainContainer")
@@ -73,8 +80,9 @@ end, "CaughtEffect")
 -- Dev Product
 
 for _, object in Purchasables:GetChildren() do
-	local Prompt = Instance.new("ProximityPrompt")
+	local Prompt = Instance.new("ProximityPrompt", object)
 	Prompt.ActionText = "Purchase"
+	Prompt.RequiresLineOfSight = false
 
 	local Module = require(object.Settings)
 
