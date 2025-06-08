@@ -139,13 +139,13 @@ local RaycastManager = {
 					name: string,
 					raycastParams: RaycastParams?
 				)
-					local Model, Handle = model:FindFirstChild(name), nil
+					local Model, Handle = model:WaitForChild(name), nil
 
 					if typeof(Model) ~= "Instance" then
 						Model = nil
 					end
 
-					Handle = Model:FindFirstChild("Handle")
+					Handle = Model:WaitForChild("Handle")
 
 					if Model and not Handle then
 						Model = nil

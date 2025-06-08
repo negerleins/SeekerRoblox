@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local Teams = game:GetService("Teams")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 -- Variables
 local Shared = ReplicatedStorage:FindFirstChild("Shared")
@@ -12,6 +13,7 @@ local PlayersFolder = workspace:FindFirstChild("Players")
 local Maps = ServerStorage:FindFirstChild("Maps")
 local MapSpawn = workspace:FindFirstChild("MapSpawn")
 local SpawnLocation = workspace:FindFirstChild("SpawnLocation")
+local SeekerTeleport = workspace:FindFirstChild("SeekerTeleport")
 
 -- Shared
 local __replicator = Shared:FindFirstChild("Replicator")
@@ -29,6 +31,32 @@ local Manager = setmetatable({
 	DefaultMap = "Canyon",
 	DefaultGame = "Normal",
 	Maps = {
+		["Barn"] = {
+			ImageId = 1737544573,
+			Method = function(self)
+				local MapModel = Maps:FindFirstChild("Barn")
+				local Clone = MapModel:Clone()
+				Clone.Parent = workspace
+				Clone:PivotTo(MapSpawn.CFrame)
+
+				warn("Barn initiated")
+
+				self.LoadedMap = Clone
+			end,
+		},
+		["Desert"] = {
+			ImageId = 17280247089,
+			Method = function(self)
+				local MapModel = Maps:FindFirstChild("Desert")
+				local Clone = MapModel:Clone()
+				Clone.Parent = workspace
+				Clone:PivotTo(MapSpawn.CFrame)
+
+				warn("Desert initiated")
+
+				self.LoadedMap = Clone
+			end,
+		},
 		["Park"] = {
 			ImageId = 9519522597,
 			Method = function(self)
@@ -42,37 +70,6 @@ local Manager = setmetatable({
 				self.LoadedMap = Clone
 			end,
 		},
-		["Canyon"] = {
-			ImageId = 3000600181,
-			Method = function(self)
-				local MapModel = Maps:FindFirstChild("Canyon")
-				local Clone = MapModel:Clone()
-				Clone.Parent = workspace
-				Clone:PivotTo(MapSpawn.CFrame)
-
-				warn("Canyon initiated")
-
-				self.LoadedMap = Clone
-			end,
-		},
-	},
-	GameModes = {
-		["Infector"] = {
-			ImageId = 1178386199,
-			Method = function(self)
-				self:startGame()
-
-				warn("Infector initiated")
-			end,
-		},
-		["Normal"] = {
-			ImageId = 12102714092,
-			Method = function(self)
-				self:startGame()
-
-				warn("Normal initiated")
-			end,
-		},
 	},
 	LoadedMap = nil,
 	MinimumPlayerAmount = 1,
@@ -80,14 +77,12 @@ local Manager = setmetatable({
 		Initial = 10, -- When server is launched and player has been initialized.
 		Map = 5,
 		MapSelection = 10,
-		GameSelection = 10,
 		HideTime = 10,
 		GameTime = 30,
 	},
 	SelectionData = {
 		Valid = {},
 		Players = {
-			["GameMode"] = {},
 			["Map"] = {},
 		},
 	},
@@ -103,9 +98,10 @@ local Manager = setmetatable({
 			Current = 0,
 			Timestamp = {
 				Current = 0,
-				Last = 0
+				Last = 0,
 			},
 		},
+		IsAFK = false,
 	},
 	Profiles = {},
 	Rewards = {
@@ -198,10 +194,58 @@ local Manager = setmetatable({
 			},
 		},
 	},
+	KillRewards = {
+		SeekerKill = 25,
+	},
+	Products = {
+		[3300697415] = function(self, player: Player) -- Become Seeker
+			local Profile = self.Profiles[player.UserId] :: ProfileStore.Profile<any>
+
+			if Profile then
+				Profile.Data.Chance = 100
+				self:UpdatePlayer(player)
+			end
+		end,
+		[3300697511] = function(self, player: Player) -- Starter Pack
+			local Profile = self.Profiles[player.UserId] :: ProfileStore.Profile<any>
+
+			if Profile then
+				Profile.Data.Chance = math.min(Profile.Data.Chance + 25, 100)
+				Profile.Data.Diamonds += 15
+				Profile.Data.Money += 500
+				self:UpdatePlayer(player)
+			end
+		end,
+	},
 }, {
 	__index = {
 		init = function(self)
 			self.ProfileStore = ProfileStore.New(RunService:IsStudio() and "Development" or "Game", self.BaseTemplate)
+
+			MarketplaceService.ProcessReceipt = function(receiptInfo)
+				local userId = receiptInfo.PlayerId or 0
+				local productId = receiptInfo.ProductId or 0
+
+				local player = Players:GetPlayerByUserId(userId)
+
+				if player then
+					local method = rawget(self.Products, productId)
+
+					if method then
+						local success, result = pcall(method, self, player)
+
+						if success then
+							return Enum.ProductPurchaseDecision.PurchaseGranted
+						else
+							warn("Failed to process receipt:", receiptInfo, result)
+						end
+					else
+						warn("Invalid receipt:", receiptInfo)
+					end
+				end
+
+				return Enum.ProductPurchaseDecision.NotProcessedYet
+			end
 
 			Players.PlayerAdded:Connect(function(player)
 				local Connection = Connector.new()
@@ -382,6 +426,7 @@ local Manager = setmetatable({
 			player:SetAttribute("Diamonds", profile.Data["Diamonds"])
 			player:SetAttribute("Chance", profile.Data["Chance"])
 			player:SetAttribute("Wins", profile.Data["Wins"])
+			player:SetAttribute("IsAFK", profile.Data["IsAFK"])
 		end,
 		characterAdded = function(self, character)
 			local Humanoid = character:FindFirstChildOfClass("Humanoid") :: Humanoid
@@ -451,6 +496,11 @@ local Manager = setmetatable({
 			end)
 		end,
 		startGame = function(self)
+			if #self.Players <= 0 then
+				self:endGame()
+				return
+			end
+
 			local SeekerModel = nil
 			local HighestChance = 0
 
@@ -489,7 +539,7 @@ local Manager = setmetatable({
 					self:UpdatePlayer(Player)
 
 					Player.Team = Teams.Player
-					self:teleport(Player.Character, self.LoadedMap.Spawner.Position + Vector3.new(0, 5, 0))
+					self:teleport(Player.Character, self.LoadedMap.SpawnPart.Position + Vector3.new(0, 5, 0))
 				else
 					if Player then
 						Player.Character.Parent = workspace
@@ -507,14 +557,14 @@ local Manager = setmetatable({
 					Profile.Data.Chance = 0
 
 					self:UpdatePlayer(Player)
-
+					self:teleport(SeekerModel, SeekerTeleport.Position + Vector3.new(0, 2, 0))
 					self:teamModel(SeekerModel, Teams.Seeker)
 				end
 			end
 
 			self:countdown(self.Countdown.HideTime, function()
 				if SeekerModel then
-					self:teleport(SeekerModel, self.LoadedMap.Spawner.Position + Vector3.new(0, 5, 0))
+					self:teleport(SeekerModel, self.LoadedMap.SpawnPart.Position + Vector3.new(0, 5, 0))
 				end
 
 				self:countdown(self.Countdown.GameTime, function()
@@ -556,24 +606,12 @@ local Manager = setmetatable({
 
 			self.SelectionData.Valid = {}
 			self.SelectionData.Players = {
-				["GameMode"] = {},
 				["Map"] = {},
 			}
 
-			self.SelectionData.Valid["GameMode"] = true
 			self.SelectionData.Valid["Map"] = true
 
-			local GameModeContent = {}
 			local MapContent = {}
-
-			for name, data in self.GameModes do
-				self.SelectionData.Valid[name] = true
-
-				table.insert(GameModeContent, {
-					ImageId = data.ImageId,
-					Selection = name,
-				})
-			end
 
 			for name, data in self.Maps do
 				self.SelectionData.Valid[name] = true
@@ -585,24 +623,16 @@ local Manager = setmetatable({
 			end
 
 			Replicator:SendToAllClients("ServerGui", {
-				Type = "GameMode",
+				Type = "Map",
 				Enabled = true,
-				Contents = GameModeContent,
+				Contents = MapContent,
 			})
 
-			self:countdown(self.Countdown.GameSelection, function()
+			self:countdown(self.Countdown.MapSelection, function()
 				Replicator:SendToAllClients("ServerGui", {
-					Type = "Map",
-					Enabled = true,
-					Contents = MapContent,
+					Enabled = false,
 				})
-
-				self:countdown(self.Countdown.MapSelection, function()
-					Replicator:SendToAllClients("ServerGui", {
-						Enabled = false,
-					})
-					self:start()
-				end)
+				self:start()
 			end)
 		end,
 		teleport = function(self, model: Model, position: Vector3)
@@ -718,31 +748,15 @@ local Manager = setmetatable({
 			local _gCount = 0
 			local _mCount = 0
 
-			local GameMode = self.DefaultGame
 			local Map = self.DefaultMap
 
-			local gameModeCounts = {}
 			local mapCounts = {}
-
-			for userId, data: {
-				Type: string,
-				Selected: string,
-			} in self.SelectionData.Players["GameMode"] do
-				gameModeCounts[data.Selected] = (gameModeCounts[data.Selected] or 0) + 1
-			end
 
 			for userId, data: {
 				Type: string,
 				Selected: string,
 			} in self.SelectionData.Players["Map"] do
 				mapCounts[data.Selected] = (mapCounts[data.Selected] or 0) + 1
-			end
-
-			for mode, count in pairs(gameModeCounts) do
-				if count > _gCount then
-					GameMode = mode
-					_gCount = count
-				end
 			end
 
 			for map, count in pairs(mapCounts) do
@@ -762,7 +776,6 @@ local Manager = setmetatable({
 			if #self.Players < self.MinimumPlayerAmount then
 				warn("no players attending resetting")
 
-				gameModeCounts = {}
 				mapCounts = {}
 
 				self:endGame()
@@ -776,21 +789,58 @@ local Manager = setmetatable({
 			end
 
 			self:countdown(self.Countdown.Map, function()
-				for name, data in self.GameModes do
-					if name == GameMode then
-						data.Method(self)
+				self:startGame()
+			end)
+		end,
+		killPlayer = function(self, player: Player, PlayerName: string)
+			if player.Team ~= Teams["Seeker"] then
+				return
+			end
+
+			local InvokerHUmanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if not InvokerHUmanoid then
+				return
+			end
+
+			if PlayerName then
+				local Player = PlayersFolder:FindFirstChild(PlayerName)
+
+				if Player then
+					local Humanoid = Player:FindFirstChildOfClass("Humanoid")
+
+					if Humanoid then
+						if (Humanoid.RootPart.Position - InvokerHUmanoid.RootPart.Position).Magnitude < 8 then
+							Replicator:SendToAllClients("CaughtEffect", PlayerName)
+
+							local Profile = self.Profiles[player.UserId] :: ProfileStore.Profile<any>
+							if Profile then
+								Profile.Data.Money += self.KillRewards.SeekerKill
+								self:UpdatePlayer(player)
+							end
+
+							task.delay(0.25, function()
+								Humanoid:SetAttribute("Died", true)
+							end)
+						end
 					end
 				end
-			end)
+			end
+
+			warn(player.Name, "requested to kill", PlayerName)
+		end,
+		setAFK = function(self, player: Player)
+			local Profile = self.Profiles[player.UserId] :: ProfileStore.Profile<any>
+
+			if Profile then
+				Profile.Data.IsAFK = not Profile.Data.IsAFK
+				self:UpdatePlayer(player)
+			end
 		end,
 	},
 })
 
-Manager:init()
-
 Replicator:Connect(function(player: Player)
-	local IsAFK = player:GetAttribute("IsAFK") or false
-	player:SetAttribute("IsAFK", not IsAFK)
+	Manager:setAFK(player)
 end, "SetAFK")
 
 Replicator:Connect(function(
@@ -814,36 +864,8 @@ Replicator:Connect(function(
 end, "Selection")
 
 Replicator:Connect(function(player: Player, PlayerName)
-	if player.Team ~= Teams["Seeker"] then
-		return
-	end
-
-	local InvokerHUmanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	if not InvokerHUmanoid then
-		return
-	end
-
-	warn(player, PlayerName)
-
-	if PlayerName then
-		local Player = PlayersFolder:FindFirstChild(PlayerName)
-
-		if Player then
-			local Humanoid = Player:FindFirstChildOfClass("Humanoid")
-
-			if Humanoid then
-				if (Humanoid.RootPart.Position - InvokerHUmanoid.RootPart.Position).Magnitude < 8 then
-					Replicator:SendToAllClients("CaughtEffect", PlayerName)
-
-					task.delay(0.25, function()
-						Humanoid:SetAttribute("Died", true)
-					end)
-				end
-			end
-		end
-	end
-
-	warn(player.Name, "requested to kill", PlayerName)
+	Manager:killPlayer(player, PlayerName)
 end, "PlayerHit")
 
 Replicator:init()
+Manager:init()

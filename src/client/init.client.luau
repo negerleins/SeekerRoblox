@@ -15,7 +15,7 @@ end
 -- Variables
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Terrain = workspace.Terrain
-local Purchasables = workspace:WaitForChild("Purchasables")
+local Purchasables = WaitForChild(workspace, "Purchasables")
 local VoteSection = workspace:WaitForChild("VoteSection")
 local Blocks = VoteSection:WaitForChild("Blocks")
 local Board = WaitForChild(VoteSection, "Board")
@@ -23,7 +23,33 @@ local SurfaceGui = Board:WaitForChild("SurfaceGui")
 local MainGui = Players.LocalPlayer.PlayerGui:WaitForChild("MainGui")
 local MainContainer = MainGui:WaitForChild("MainContainer")
 local Left = MainContainer:WaitForChild("Left")
+local Middle = MainContainer:WaitForChild("Middle")
+local MiddleFrame = Middle:WaitForChild("Middle")
 local AFKBtn = Left:WaitForChild("AFKBtn") :: ImageButton
+local Buttons = {
+	ShopBtn = {
+		Page = nil,
+		Button = Left:WaitForChild("ShopBtn"),
+	},
+	InventoryBtn = {
+		Page = nil,
+		Button = Left:WaitForChild("InventoryBtn"),
+	},
+	RewardsBtn = {
+		Page = MiddleFrame:WaitForChild("Rewards"),
+		Button = Left:WaitForChild("RewardsBtn") ,
+	},
+	SettingsBtn = {
+		Page = nil,
+		Button = Left:WaitForChild("SettingsBtn")
+	},
+} :: {
+	[string]: {
+		Page: GuiObject,
+		Button: GuiButton,
+	},
+}
+
 
 -- Shared
 local __replicator = Shared:WaitForChild("Replicator")
@@ -36,6 +62,40 @@ local PlayersFolder = workspace:FindFirstChild("Players")
 -- Replicator
 local Replicator = require(__replicator)
 local Connector = require(__connector)
+
+-- PageManger
+local PageManger = setmetatable({
+	CurrentPage = nil,
+}, {
+	__index = {
+		init = function(self)
+			for _, data in Buttons do
+				if data.Button then
+					data.Button.MouseButton1Click:Connect(function()
+						self:select(data.Page)
+					end)
+				end
+			end
+		end,
+		select = function(self, page: GuiObject)
+			if self.CurrentPage and self.CurrentPage == page then
+				self.CurrentPage.Visible = false
+				self.CurrentPage = nil
+				
+				return
+			else
+				if self.CurrentPage then
+					self.CurrentPage.Visible = false
+				end
+
+				if page then
+					self.CurrentPage = page
+					self.CurrentPage.Visible = true
+				end
+			end
+		end
+	},
+})
 
 -- Functions
 local function EmitEffect(object, emitCount: number?)
@@ -79,25 +139,28 @@ end, "CaughtEffect")
 
 -- Dev Product
 
-for _, object in Purchasables:GetChildren() do
-	local Prompt = Instance.new("ProximityPrompt", object)
-	Prompt.ActionText = "Purchase"
-	Prompt.RequiresLineOfSight = false
+task.delay(10, function()
+	for _, object in Purchasables:GetChildren() do
+		local Prompt = Instance.new("ProximityPrompt", object)
+		Prompt.ActionText = "Purchase"
+		Prompt.RequiresLineOfSight = false
+		warn("Created Purchasable.", object.Name)
 
-	local Module = require(object.Settings)
+		local Module = require(object.Settings)
 
-	Prompt.Triggered:Connect(function()
-		local productId = Module.ID
+		Prompt.Triggered:Connect(function()
+			local productId = Module.ID
 
-		local success, _ = pcall(function()
-			MarketplaceService:PromptProductPurchase(Players.LocalPlayer, productId)
+			local success, _ = pcall(function()
+				MarketplaceService:PromptProductPurchase(Players.LocalPlayer, productId)
+			end)
+
+			if success then
+				print("Purchase prompt shown successfully")
+			end
 		end)
-
-		if success then
-			print("Purchase prompt shown successfully")
-		end
-	end)
-end
+	end
+end)
 
 -- Values
 local Connection = Connector.new()
@@ -181,3 +244,4 @@ AFKBtn.MouseButton1Click:Connect(function()
 end)
 
 Replicator:init()
+PageManger:init()
