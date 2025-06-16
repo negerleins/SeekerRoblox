@@ -1,4 +1,5 @@
 -- Dependencies
+local SoundService = game:GetService("SoundService")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 
@@ -77,6 +78,7 @@ end
 
 -- Variables
 local Presets = Lighting:WaitForChild("LightingPresets")
+local AmbienceMusic = SoundService:WaitForChild("Ambience")
 
 -- Modules
 local Normal = require(Presets:WaitForChild("Normal"))
@@ -95,6 +97,9 @@ return setmetatable({
 			for _, method in Normal do
 				method()
 			end
+
+			AmbienceMusic.Looped = true
+			AmbienceMusic:Play()
 		end,
 		stop = function(self)
 			self.Connection:End()
@@ -102,6 +107,8 @@ return setmetatable({
 			for _, object: Instance in self.Instances do
 				object:Destroy()
 			end
+
+			AmbienceMusic:Stop()
 		end,
 	},
 }) :: MainClass

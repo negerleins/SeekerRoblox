@@ -4,6 +4,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local HttpService = game:GetService("HttpService")
+local SoundService = game:GetService("SoundService")
 
 local function WaitForChild(parent, name)
 	repeat
@@ -24,8 +25,13 @@ local MainGui = Players.LocalPlayer.PlayerGui:WaitForChild("MainGui")
 local MainContainer = MainGui:WaitForChild("MainContainer")
 local Left = MainContainer:WaitForChild("Left")
 local Middle = MainContainer:WaitForChild("Middle")
+local Right = MainContainer:WaitForChild("Right")
+local RightTop = Right:WaitForChild("Top")
 local MiddleFrame = Middle:WaitForChild("Middle")
 local AFKBtn = Left:WaitForChild("AFKBtn") :: ImageButton
+local Reveal = MiddleFrame:WaitForChild("Reveal") :: GuiObject
+local EndGameBtn = RightTop:WaitForChild("EndGameBtn") :: ImageButton
+
 local Buttons = {
 	ShopBtn = {
 		Page = nil,
@@ -37,11 +43,11 @@ local Buttons = {
 	},
 	RewardsBtn = {
 		Page = MiddleFrame:WaitForChild("Rewards"),
-		Button = Left:WaitForChild("RewardsBtn") ,
+		Button = Left:WaitForChild("RewardsBtn"),
 	},
 	SettingsBtn = {
 		Page = nil,
-		Button = Left:WaitForChild("SettingsBtn")
+		Button = Left:WaitForChild("SettingsBtn"),
 	},
 } :: {
 	[string]: {
@@ -49,7 +55,6 @@ local Buttons = {
 		Button: GuiButton,
 	},
 }
-
 
 -- Shared
 local __replicator = Shared:WaitForChild("Replicator")
@@ -81,7 +86,7 @@ local PageManger = setmetatable({
 			if self.CurrentPage and self.CurrentPage == page then
 				self.CurrentPage.Visible = false
 				self.CurrentPage = nil
-				
+
 				return
 			else
 				if self.CurrentPage then
@@ -93,7 +98,7 @@ local PageManger = setmetatable({
 					self.CurrentPage.Visible = true
 				end
 			end
-		end
+		end,
 	},
 })
 
@@ -235,9 +240,111 @@ Replicator:Connect(function(PageData: {
 	end
 end, "ServerGui")
 
+Replicator:Connect(function(gameData: {
+	Seekers: { number },
+	Players: { number },
+})
+	local ContinueBtn = Reveal:FindFirstChild("ContinueBtn", true) :: GuiButton
+	local SeekersList = Reveal:FindFirstChild("Seekers", true)
+	local PlayersList = Reveal:FindFirstChild("Players", true)
+	local Template = Reveal:FindFirstChild("Template", true) :: GuiButton
+
+	local function CreateButton(color, parent, userid)
+		local Player = Players:GetPlayerByUserId(userid)
+
+		if Player then
+			local nTemplate = Template:Clone()
+			nTemplate.Visible = true
+			nTemplate.Parent = parent
+			nTemplate.BackgroundColor3 = color
+
+			local PlayerName = nTemplate:FindFirstChild("PlayerName")
+
+			if PlayerName then
+				PlayerName.Text = Player.Name
+			end
+		end
+	end
+
+	for _, object in SeekersList:GetChildren() do
+		if object:IsA("CanvasGroup") then
+			object:Destroy()
+		end
+	end
+
+	for _, object in PlayersList:GetChildren() do
+		if object:IsA("CanvasGroup") then
+			object:Destroy()
+		end
+	end
+
+	warn(gameData)
+
+	if gameData.Seekers then
+		for _, userId in gameData.Seekers do
+			CreateButton(Color3.fromRGB(255, 184, 185), SeekersList, userId)
+		end
+	end
+
+	if gameData.Players then
+		for _, userId in gameData.Players do
+			CreateButton(Color3.fromRGB(188, 224, 255), PlayersList, userId)
+		end
+	end
+
+	ContinueBtn.MouseButton1Click:Once(function()
+		Reveal.Visible = false
+	end)
+
+	Reveal.Visible = true
+end, "RevealFrame")
+
+Replicator:Connect(function(name: string)
+	local Sound = SoundService:FindFirstChild(name)
+
+	if Sound then
+		local Clone = Sound:Clone() :: Sound
+		Clone.Parent = SoundService
+
+		Clone:Play()
+
+		task.delay(Clone.TimeLength, function()
+			Clone:Destroy()
+		end)
+	end
+end, "InSound")
+
+Replicator:Connect(function(settings: {
+	name: string,
+	position: { [number]: number }
+})
+	local Sound = SoundService:FindFirstChild(settings.name)
+	warn(Sound, settings)
+	local Position = Vector3.new(unpack(settings.position)) 
+
+	if Sound then
+		local soundClone = Sound:Clone() :: Sound
+		local attachment = Instance.new("Attachment", Terrain)
+		attachment.WorldPosition = Position
+		soundClone.Parent = attachment
+
+		task.delay(soundClone.TimeLength, function()
+			attachment:Destroy()
+		end)
+
+		soundClone:Play()
+	end
+end, "OutSound")
+
+EndGameBtn.MouseButton1Click:Connect(function()
+	Replicator:SendToServer("EndGame")
+end)
+
 Players.LocalPlayer:GetAttributeChangedSignal("IsAFK"):Connect(function()
 	AFKBtn.TextLabel.Text = ({ [false] = "AFK [OFF]", [true] = "AFK [ON]" })[Players.LocalPlayer:GetAttribute("IsAFK")]
 end)
+
+AFKBtn.TextLabel.Text = ({ [false] = "AFK [OFF]", [true] = "AFK [ON]" })[Players.LocalPlayer:GetAttribute("IsAFK") or false]
 
 AFKBtn.MouseButton1Click:Connect(function()
 	Replicator:SendToServer("SetAFK")

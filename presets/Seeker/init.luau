@@ -8,6 +8,7 @@ return {
 	Lighting.Object.Sky(true, {
 		[Lighting.Enums.Sky.MoonAngularSize] = 0,
 		[Lighting.Enums.Sky.SunAngularSize] = 0,
+		[Lighting.Enums.Sky.StarCount] = 0,
 	}, function(object, config)
 		local tweenInfo = TweenService.TweenInfo.new(1)
 		Lighting.TweenArray(object, config, tweenInfo)

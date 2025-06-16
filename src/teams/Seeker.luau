@@ -1,8 +1,10 @@
 -- Dependencies
-local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local UserInput = game:GetService("UserInputService")
+local SoundService = game:GetService("SoundService")
+local RunService = game:GetService("RunService")
+local Tween = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 
@@ -12,6 +14,7 @@ local PlayersFolder = workspace:FindFirstChild("Players")
 local Presets = Lighting:WaitForChild("LightingPresets")
 local Imports = ReplicatedStorage:WaitForChild("Imports")
 local SHared = ReplicatedStorage:WaitForChild("Shared")
+local AmbienceMusic = SoundService:WaitForChild("Ambience")
 
 -- Modules
 local Seeker = require(Presets:WaitForChild("Seeker"))
@@ -82,12 +85,17 @@ type MainArray = {
 	Animation: AnimatorClass,
 	EffectedPlayers: { Model },
 	WeaponCooldown: number,
+	InSight: {},
+	Settings: {
+		QuestionMarkIndication: number,
+	},
 }
 
 type MainClass = typeof(setmetatable) & MainArray & {
 	cleanup: (self: MainClass) -> nil,
 	start: (self: MainClass) -> nil,
 	stop: (self: MainClass) -> nil,
+	isObstructed: (self: MainClass, originPart: BasePart, targetPart: BasePart) -> RaycastResult,
 }
 
 -- Task
@@ -259,6 +267,67 @@ local function SpawnEffect(object: Attachment, reference: BasePart, emitCount: n
 	end)
 end
 
+local function SetTransparency(number, data, ignore, callback, multiple: boolean?)
+	if multiple then
+		for _, object: Model in data do
+			if object == ignore then
+				continue
+			end
+
+			if callback then
+				callback(object)
+			end
+
+			for _, innerObject in object:GetDescendants() do
+				if
+					(innerObject:IsA("Part") or innerObject:IsA("MeshPart"))
+					and innerObject.Name ~= "HumanoidRootPart"
+				then
+					innerObject.Transparency = number
+				end
+
+				if innerObject:IsA("Decal") then
+					innerObject.Transparency = number
+				end
+			end
+		end
+	elseif typeof(data) == "Instance" then
+		for _, innerObject in data:GetDescendants() do
+			if (innerObject:IsA("Part") or innerObject:IsA("MeshPart")) and innerObject.Name ~= "HumanoidRootPart" then
+				innerObject.Transparency = number
+			end
+
+			if innerObject:IsA("Decal") then
+				innerObject.Transparency = number
+			end
+		end
+	end
+end
+
+local Meshes = {} :: { [Model]: { { Previous: any, Mesh: SpecialMesh } } }
+local function ToggleMesh(character, toggle)
+	if Meshes[character] and toggle == false then
+		for _, data in Meshes[character] do
+			for _, object: { Previous: any, Mesh: SpecialMesh } in data do
+				object.Mesh.Parent = object.Previous
+			end
+		end
+
+		Meshes[character] = nil
+	elseif not Meshes[character] then -- if toggle
+		for _, object in character:GetChildren() do
+			if object:IsA("SpecialMesh") then
+				table.insert(Meshes[character], {
+					Previous = object.Parent,
+					Mesh = object,
+				})
+
+				object.Parent = ReplicatedStorage
+			end
+		end
+	end
+end
+
 -- Metadata
 return setmetatable({
 	Instances = {},
@@ -268,6 +337,10 @@ return setmetatable({
 	Variables = {},
 	EffectedPlayers = {},
 	WeaponCooldown = 2.5,
+	InSight = {},
+	Settings = {
+		QuestionMarkIndication = 5,
+	},
 }, {
 	__index = {
 		cleanup = function(self: MainClass)
@@ -277,24 +350,18 @@ return setmetatable({
 			self.Instances = {}
 			self.Variables = {}
 			self.EffectedPlayers = {}
+			self.InSight = {}
 		end,
 		start = function(self: MainClass)
-			local AppearEffect = ReplicatedFirst:FindFirstChild("AppearEffect")
-			local HeartbeatEffect = ReplicatedFirst:FindFirstChild("HeartbeatEffect")
+			local AppearEffect = ReplicatedFirst:WaitForChild("AppearEffect")
+			local HeartbeatEffect = ReplicatedFirst:WaitForChild("HeartbeatEffect")
+			local Notify = ReplicatedFirst:WaitForChild("Notify")
+			local Spotted = ReplicatedFirst:WaitForChild("Spotted")
 
-			for _, object: Model in PlayersFolder:GetChildren() do
-				if object == Players.LocalPlayer.Character then
-					continue
-				end
+			SetTransparency(1, PlayersFolder:GetChildren(), Players.LocalPlayer.Character, function(object)
 				table.insert(self.EffectedPlayers, object)
-
-				for _, innerObject in object:GetDescendants() do
-					if innerObject:IsA("Part") and innerObject.Name ~= "HumanoidRootPart" then
-						innerObject.Transparency = 1
-						innerObject.CollisionGroup = "TouchablePlayer"
-					end
-				end
-			end
+				ToggleMesh(object, true)
+			end, true)
 
 			for _, method in Seeker do
 				method()
@@ -334,7 +401,7 @@ return setmetatable({
 							cooldown = false
 						end)
 					end
-					
+
 					if SwingAnimation.IsPlaying then
 						return
 					end
@@ -427,11 +494,8 @@ return setmetatable({
 
 								SpawnEffect(AppearEffect.Effect, object.PrimaryPart, 1)
 
-								for _, innerObject in object:GetDescendants() do
-									if innerObject:IsA("Part") and innerObject.Name ~= "HumanoidRootPart" then
-										innerObject.Transparency = 0
-									end
-								end
+								ToggleMesh(object, false)
+								SetTransparency(0, object)
 							end
 						else
 							-- AppearEffect
@@ -440,16 +504,65 @@ return setmetatable({
 
 								SpawnEffect(AppearEffect.Effect, object.PrimaryPart, 1)
 
-								for _, innerObject in object:GetDescendants() do
-									if innerObject:IsA("Part") and innerObject.Name ~= "HumanoidRootPart" then
-										innerObject.Transparency = 1
-									end
-								end
+								ToggleMesh(object, true)
+								SetTransparency(1, object)
 							end
 						end
+
+						-- Question Mark
+
+						if not self:isObstructed(Players.LocalPlayer.Character.PrimaryPart, object.PrimaryPart) then
+							if not self.InSight[object] then
+								self.InSight[object] = task.delay(self.Settings.QuestionMarkIndication, function()
+									self.InSight[object] = true
+
+									local Clone = Notify:Clone()
+									local Attachment = Instance.new("Attachment", Terrain)
+									Attachment.Position = object.PrimaryPart.Position
+
+									self.Instances[Notify.Name .. object.Name] = Attachment
+
+									Clone.Size = UDim2.fromScale(0, 0)
+									Clone.Adornee = Attachment
+									Clone.Parent = Attachment
+
+									Tween:Create(Clone, TweenInfo.new(1, Enum.EasingStyle.Bounce), {
+										Size = UDim2.fromScale(3, 3),
+									}):Play()
+
+									task.delay(1.75, function()
+										local __Tween = Tween:Create(Clone, TweenInfo.new(1, Enum.EasingStyle.Linear), {
+											Size = UDim2.fromScale(0, 0),
+										})
+
+										__Tween.Completed:Connect(function()
+											if self.Instances[Notify.Name .. object.Name] then
+												self.Instances[Notify.Name .. object.Name]:Destroy()
+												self.Instances[Notify.Name .. object.Name] = nil
+												self.InSight[object] = false
+											end
+										end)
+
+										__Tween:Play()
+									end)
+								end)
+							end
+						else
+							if typeof(self.InSight[object]) == "thread" or self.InSight[object] == false then
+								if typeof(self.InSight[object]) == "thread" then
+									task.cancel(self.InSight[object])
+								end
+
+								self.InSight[object] = nil
+							end
+						end
+						--
 					end
 				end
 			end)
+
+			AmbienceMusic.Looped = true
+			AmbienceMusic:Play()
 		end,
 		stop = function(self)
 			self.Connection:End()
@@ -460,17 +573,19 @@ return setmetatable({
 				object:Destroy()
 			end
 
-			for _, object: Model in self.EffectedPlayers do
-				if object == Players.LocalPlayer.Character then
-					continue
-				end
+			SetTransparency(0, self.EffectedPlayers, Players.LocalPlayer.Character, function(object)
+				ToggleMesh(object, false)
+			end, true)
 
-				for _, innerObject in object:GetDescendants() do
-					if innerObject:IsA("Part") and innerObject.Name ~= "HumanoidRootPart" then
-						innerObject.Transparency = 0
-					end
-				end
-			end
+			AmbienceMusic:Stop()
+		end,
+		isObstructed = function(self, originPart, targetPart)
+			local params = RaycastParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = { originPart.Parent }
+
+			local result = workspace:Raycast(originPart.Position, targetPart.Position - originPart.Position, params)
+			return result and not result.Instance:IsDescendantOf(targetPart.Parent)
 		end,
 	},
 }) :: MainClass
